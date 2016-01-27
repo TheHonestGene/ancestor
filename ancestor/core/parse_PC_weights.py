@@ -9,6 +9,7 @@
      - Store ancestry boundaries.
 3. Predict ancestry for target individuals  
 
+4.
 
 """
 
