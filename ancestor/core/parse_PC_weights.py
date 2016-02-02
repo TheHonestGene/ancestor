@@ -15,6 +15,13 @@
 """
 from itertools import izip
 import scipy as sp
+import h5py
+import pylab
+
+cloud_dir = '/Users/bjv/Dropbox/Cloud_folder/'
+repos_dir = '/Users/bjv/REPOS/'
+Kg_nt_decoder = {1:'A', 2:'T', 3:'C', 4:'G', }
+
 
 def parse_PC_weights(pc_weights_file='/Users/bjv/REPOS/ancestor/tests/snpwt.CO'):
     """
@@ -38,9 +45,9 @@ rs11240767 C T 0.94797 1.9086e-07 8.4583e-08
             l = line.split()
             sid = l[0]
             nts = [l[1],l[2]]
-            mean_g = l[3]
-            pcw1 = l[4]
-            pcw2 = l[5]
+            mean_g = float(l[3])
+            pc1w = float(l[4])
+            pc2w = float(l[5])
             sid_dict[sid]={'pc1w':pc1w, 'pc2w':pc2w, 'mean_g':mean_g, 'nts':nts}
             
     return sid_dict
@@ -106,7 +113,8 @@ def calc_pc_vals(genotype_file, weight_dict=None, weight_file=None):
 
 
 
-def plot_1KG_PCs(kg_file=cloud_dir+'Data/1Kgenomes/1K_genomes_v3.hdf5'):
+def plot_1KG_PCs(kg_file=cloud_dir+'Data/1Kgenomes/1K_genomes_v3.hdf5', plot_file = cloud_dir+'tmp/PC_plot.png', 
+                 out_file=repos_dir+'ancestor/tests/data/1kg_pc_coord.hdf5'):
     
     #Load weights to identify which SNPs to use.
     sid_dict = parse_PC_weights()
@@ -114,52 +122,121 @@ def plot_1KG_PCs(kg_file=cloud_dir+'Data/1Kgenomes/1K_genomes_v3.hdf5'):
     print 'Loaded PC weight for %d SNPs'%(len(ok_sids))
     
     #Load genotypes
-    h5f = h5py.File()
+    h5f = h5py.File(kg_file)
     eur_filter = h5f['indivs']['continent'][...]=='EUR'
     amr_filter = h5f['indivs']['continent'][...]=='AMR'
     asn_filter = h5f['indivs']['continent'][...]=='ASN'
     afr_filter = h5f['indivs']['continent'][...]=='AFR'
     num_indivs = len(h5f['indivs']['continent'][...])
+    print 'Found genotypes for %d individuals'%num_indivs
     
-    eur_pcs = sp.zeros((sp.sum(eur_filter),2))
-    amr_pcs = sp.zeros((sp.sum(amr_filter),2))
-    afr_pcs = sp.zeros((sp.sum(afr_filter),2))
-    asn_pcs = sp.zeros((sp.sum(asn_filter),2))
-
-    for chrom in range(1,23):
+    pcs = sp.zeros((num_indivs,2))
+    
+    num_nt_issues = 0
+    num_snps_used = 0
+    for chrom in range(1,3):
         print 'Working on Chromosome %d'%chrom
         chrom_str = 'chr%d'%chrom
         print 'Identifying overlap'
         sids = h5f[chrom_str]['snp_ids'][...]
         ok_snp_filter = sp.in1d(sids, ok_sids)
-        assert sids[ok_snp_filter]==ok_sids, 'WTF?'
+#         assert sids[ok_snp_filter]==ok_sids, 'WTF?'
+        sids = sids[ok_snp_filter]
         
         print 'Loading SNPs'
         snps = h5f[chrom_str]['raw_snps'][...]
         snps = snps[ok_snp_filter]
-        eur_snps = snps[:,eur_filter]
-        asn_snps = snps[:,asn_filter]
-        afr_snps = snps[:,afr_filter]
-        amr_snps = snps[:,amr_filter]
+        
+
+        nts = h5f[chrom_str]['nts'][...]
+        nts = nts[ok_snp_filter]
         
         print 'updating PCs'
-        
-        
-    K = K/float(num_snps)
-    print 'Kinship calculation done using %d SNPs\n'%num_snps
-    
-    
-    #Project on the PCs
-    #Plot them
-    #Store coordinates
-    
-    
-    pass
+        for snp_i, sid in enumerate(sids):
+            d = sid_dict[sid]
+            nt = nts[snp_i]
+            nt = [Kg_nt_decoder[nt[0]],Kg_nt_decoder[nt[1]]]
+            snp = snps[snp_i]
+            pc_weights = sp.array([d['pc1w'],d['pc2w']])
+            pc_weights.shape = (1,2)
+            af = d['mean_g']/2.0
+            if sp.all([nt[1],nt[0]]==d['nts']):
+                #print 'Flip sign'
+                pc_weights = -pc_weights
+                af = 1-af
+            elif not sp.all(nt == d['nts']):
+                num_nt_issues+=1
+                continue
+            
+            mean_g = 2*af
+            sd_g = sp.sqrt(af*(1-af))
 
-def plot_genome_pcs():
+            #"Normalizing" the SNPs with the given allele frequencies
+            norm_snp = (snp-mean_g)/sd_g
+            norm_snp.shape = (num_indivs,1)
+
+            #Project on the PCs
+            pcs += sp.dot(norm_snp,pc_weights)
+            num_snps_used+=1
+
+    h5f.close()
+    print pcs[eur_filter]
+    print pcs[asn_filter]
+    print pcs[afr_filter]
+    print pcs[amr_filter]
+    print '%d SNPs were excluded from the analysis due to nucleotide issues.'%(num_nt_issues)
+    print '%d SNPs were used for the analysis.'%(num_snps_used)
+            
+        
+    #Plot them
+    pylab.plot(pcs[eur_filter][:,0],pcs[eur_filter][:,1], label='EUR', ls='', marker='.',alpha=0.6)
+    pylab.plot(pcs[asn_filter][:,0],pcs[asn_filter][:,1], label='ASN', ls='',  marker='.',alpha=0.6)
+    pylab.plot(pcs[afr_filter][:,0],pcs[afr_filter][:,1], label='AFR', ls='', marker='.',alpha=0.6)
+    pylab.plot(pcs[amr_filter][:,0],pcs[amr_filter][:,1], label='AMR', ls='', marker='.',alpha=0.6)
+    pylab.xlabel('PC 1')
+    pylab.ylabel('PC 2')
+    pylab.legend(loc=4,numpoints=1)
+    pylab.savefig(plot_file)
+        
+    #Store coordinates
+    oh5f = h5py.File(out_file)
+    oh5f.create_dataset('pcs',data=pcs)
+    oh5f.create_dataset('asn_filter',data=asn_filter)
+    oh5f.create_dataset('afr_filter',data=afr_filter)
+    oh5f.create_dataset('amr_filter',data=amr_filter)
+    oh5f.create_dataset('eur_filter',data=eur_filter)
+    oh5f.close()
+    
+    
+    
+def plot_genome_pcs(genotype_file=repos_dir+'imputor/tests/data/test_out_genotype.hdf5', 
+                    kgenomes_pc_coord_file = repos_dir+'ancestor/tests/data/1kg_pc_coord.hdf5', 
+                    plot_file=cloud_dir+'tmp/PC_plot.png'):
     #Load 1K genomes coordinates and plot.
+    ch5f = h5py.File(kgenomes_pc_coord_file)
+
+    eur_filter = ch5f['eur_filter'][...]
+    afr_filter = ch5f['afr_filter'][...]
+    amr_filter = ch5f['amr_filter'][...]
+    asn_filter = ch5f['asn_filter'][...]
+    pcs = ch5f['pcs'][...]
+    ch5f.close()
+    
+    pylab.plot(pcs[eur_filter][:,0],pcs[eur_filter][:,1], label='EUR', ls='', marker='.',alpha=0.6)
+    pylab.plot(pcs[asn_filter][:,0],pcs[asn_filter][:,1], label='ASN', ls='', marker='.',alpha=0.6)
+    pylab.plot(pcs[afr_filter][:,0],pcs[afr_filter][:,1], label='AFR', ls='', marker='.',alpha=0.6)
+    pylab.plot(pcs[amr_filter][:,0],pcs[amr_filter][:,1], label='AMR', ls='', marker='.',alpha=0.6)
+    
     #Project genome on to plot.
+    ret_dict = calc_pc_vals(genotype_file)
+    pylab.plot(ret_dict['pc1'], ret_dict['pc2'], 'o', label='This is you')
+    
+    pylab.xlabel('PC 1')
+    pylab.ylabel('PC 2')
+    pylab.legend(loc=4,numpoints=1)
+    pylab.savefig(plot_file)
+    
     #Report ancestry. 
-    pass
+    
 
     
