@@ -72,7 +72,8 @@ def calc_pc_vals(genotype_file, weight_dict=None, weight_file=None):
         #Loading data 
         sids = g_cg['sids'][...]
         nts = g_cg['nts'][...]
-        snps = g_cg['sids'][...]
+        snps = g_cg['snps'][...]
+        print sids
         
         num_snps_found = 0
         num_nt_issues = 0
@@ -209,10 +210,11 @@ def plot_1KG_PCs(kg_file=cloud_dir+'Data/1Kgenomes/1K_genomes_v3.hdf5', plot_fil
     
     
     
-def plot_genome_pcs(genotype_file=repos_dir+'imputor/tests/data/test_out_genotype.hdf5', 
+def plot_genome_pcs(genotype_file=repos_dir+'imputor/tests/data/test_out_genotype_imputed.hdf5', 
                     kgenomes_pc_coord_file = repos_dir+'ancestor/tests/data/1kg_pc_coord.hdf5', 
                     plot_file=cloud_dir+'tmp/PC_plot.png'):
     #Load 1K genomes coordinates and plot.
+    print 'Loading 1000 genomes coordinates'
     ch5f = h5py.File(kgenomes_pc_coord_file)
 
     eur_filter = ch5f['eur_filter'][...]
@@ -228,7 +230,8 @@ def plot_genome_pcs(genotype_file=repos_dir+'imputor/tests/data/test_out_genotyp
     pylab.plot(pcs[amr_filter][:,0],pcs[amr_filter][:,1], label='AMR', ls='', marker='.',alpha=0.6)
     
     #Project genome on to plot.
-    ret_dict = calc_pc_vals(genotype_file)
+    sid_dict = parse_PC_weights()    
+    ret_dict = calc_pc_vals(genotype_file,sid_dict)
     pylab.plot(ret_dict['pc1'], ret_dict['pc2'], 'o', label='This is you')
     
     pylab.xlabel('PC 1')
