@@ -106,11 +106,54 @@ def calc_pc_vals(genotype_file, weight_dict=None, weight_file=None):
 
 
 
-def plot_1KG_PCs(kg_file='...'):
+def plot_1KG_PCs(kg_file=cloud_dir+'Data/1Kgenomes/1K_genomes_v3.hdf5'):
+    
+    #Load weights to identify which SNPs to use.
+    sid_dict = parse_PC_weights()
+    ok_sids = sp.array(sid_dict.keys())
+    print 'Loaded PC weight for %d SNPs'%(len(ok_sids))
+    
     #Load genotypes
+    h5f = h5py.File()
+    eur_filter = h5f['indivs']['continent'][...]=='EUR'
+    amr_filter = h5f['indivs']['continent'][...]=='AMR'
+    asn_filter = h5f['indivs']['continent'][...]=='ASN'
+    afr_filter = h5f['indivs']['continent'][...]=='AFR'
+    num_indivs = len(h5f['indivs']['continent'][...])
+    
+    eur_pcs = sp.zeros((sp.sum(eur_filter),2))
+    amr_pcs = sp.zeros((sp.sum(amr_filter),2))
+    afr_pcs = sp.zeros((sp.sum(afr_filter),2))
+    asn_pcs = sp.zeros((sp.sum(asn_filter),2))
+
+    for chrom in range(1,23):
+        print 'Working on Chromosome %d'%chrom
+        chrom_str = 'chr%d'%chrom
+        print 'Identifying overlap'
+        sids = h5f[chrom_str]['snp_ids'][...]
+        ok_snp_filter = sp.in1d(sids, ok_sids)
+        assert sids[ok_snp_filter]==ok_sids, 'WTF?'
+        
+        print 'Loading SNPs'
+        snps = h5f[chrom_str]['raw_snps'][...]
+        snps = snps[ok_snp_filter]
+        eur_snps = snps[:,eur_filter]
+        asn_snps = snps[:,asn_filter]
+        afr_snps = snps[:,afr_filter]
+        amr_snps = snps[:,amr_filter]
+        
+        print 'updating PCs'
+        
+        
+    K = K/float(num_snps)
+    print 'Kinship calculation done using %d SNPs\n'%num_snps
+    
+    
     #Project on the PCs
     #Plot them
     #Store coordinates
+    
+    
     pass
 
 def plot_genome_pcs():
