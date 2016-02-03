@@ -17,6 +17,7 @@ from itertools import izip
 import scipy as sp
 import h5py
 import pylab
+import cPickle
 
 cloud_dir = '/Users/bjv/Dropbox/Cloud_folder/'
 repos_dir = '/Users/bjv/REPOS/'
@@ -110,13 +111,18 @@ def calc_pc_vals(genotype_file, weight_dict=None, weight_file=None):
     gh5f.close()
 
     print 'Number of SNPs uesd for PC projection: %d'%num_snps_used
-    return {'pc1':pc1, 'pc2':pc2}
+    return {'pc1':pc1, 'pc2':pc2, 'num_snps_used':num_snps_used}
 
 
 
 def plot_1KG_PCs(kg_file=cloud_dir+'Data/1Kgenomes/1K_genomes_v3.hdf5', plot_file = cloud_dir+'tmp/PC_plot.png', 
-                 out_file=repos_dir+'ancestor/tests/data/1kg_pc_coord.hdf5'):
+                 out_file=repos_dir+'ancestor/tests/data/1kg_pc_coord.hdf5', nt_map_file=cloud_dir+'tmp/nt_map.pickled'):
     
+    #load map file.
+    f = open(nt_map_file, 'r')
+    snp_map_dict = cPickle.load(f)
+    f.close()
+
     #Load weights to identify which SNPs to use.
     sid_dict = parse_PC_weights()
     ok_sids = sp.array(sid_dict.keys())
@@ -135,12 +141,18 @@ def plot_1KG_PCs(kg_file=cloud_dir+'Data/1Kgenomes/1K_genomes_v3.hdf5', plot_fil
     
     num_nt_issues = 0
     num_snps_used = 0
-    for chrom in range(1,3):
+    for chrom in range(1,23):
         print 'Working on Chromosome %d'%chrom
         chrom_str = 'chr%d'%chrom
+        chrom_dict = snp_map_dict[chrom_str]
+        g_sids = chrom_dict['sids']
+
+
         print 'Identifying overlap'
+        ok_snp_filter = sp.in1d(ok_sids, g_sids)
+        ok_chrom_sids = ok_sids[ok_snp_filter]
         sids = h5f[chrom_str]['snp_ids'][...]
-        ok_snp_filter = sp.in1d(sids, ok_sids)
+        ok_snp_filter = sp.in1d(sids, ok_chrom_sids)
 #         assert sids[ok_snp_filter]==ok_sids, 'WTF?'
         sids = sids[ok_snp_filter]
         
@@ -221,6 +233,7 @@ def plot_genome_pcs(genotype_file=repos_dir+'imputor/tests/data/test_out_genotyp
     afr_filter = ch5f['afr_filter'][...]
     amr_filter = ch5f['amr_filter'][...]
     asn_filter = ch5f['asn_filter'][...]
+    
     pcs = ch5f['pcs'][...]
     ch5f.close()
     
@@ -228,12 +241,13 @@ def plot_genome_pcs(genotype_file=repos_dir+'imputor/tests/data/test_out_genotyp
     pylab.plot(pcs[asn_filter][:,0],pcs[asn_filter][:,1], label='ASN', ls='', marker='.',alpha=0.6)
     pylab.plot(pcs[afr_filter][:,0],pcs[afr_filter][:,1], label='AFR', ls='', marker='.',alpha=0.6)
     pylab.plot(pcs[amr_filter][:,0],pcs[amr_filter][:,1], label='AMR', ls='', marker='.',alpha=0.6)
-    
+
     #Project genome on to plot.
     sid_dict = parse_PC_weights()    
     ret_dict = calc_pc_vals(genotype_file,sid_dict)
     pylab.plot(ret_dict['pc1'], ret_dict['pc2'], 'o', label='This is you')
     
+
     pylab.xlabel('PC 1')
     pylab.ylabel('PC 2')
     pylab.legend(loc=4,numpoints=1)
