@@ -254,6 +254,17 @@ def plot_genome_pcs(genotype_file=repos_dir+'imputor/tests/data/test_out_genotyp
     pylab.savefig(plot_file)
     
     #Report ancestry. 
+    eur_pcs = pcs[eur_filter]
+    eur_mean = sp.mean(eur_pcs,0)
+    eur_stds = sp.std(eur_pcs,0)
+    eur_lim = (3*eur_stds)**2
+    ind_pcs = sp.array([ret_dict['pc1'], ret_dict['pc2']])
+    print eur_mean, ind_pcs
+    print (ind_pcs-eur_mean)**2, eur_lim
+    if sp.any((ind_pcs-eur_mean)**2>eur_lim):
+        print 'Sample appears to contain some non-European ancestry.  This means that current genetic predictions are probably not accurate.'
+    else:
+        print 'Sample appears to be of European ancestry.'
     
 
     
