@@ -32,6 +32,8 @@ setup(
     ],
     keywords='Risk Prediction',
     packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
+    setup_requires=['pytest-runner'],
+    tests_require=['pytest'],
     install_requires=[
     ],
     entry_points={
