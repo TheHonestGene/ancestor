@@ -14,7 +14,8 @@ Requirements
 
 The ancestry relies on the 1000 Genomes HapMap dataset.
 The dataset has to be provided as an HDF5 file and be in a specific format
-A version can be downloaded here.
+
+To play around pcs files, a test genotype and the weights in HDF5 (calculated based on the above 1000 genomes HapMap dataset) format can be found in the https://github.com/TheHonestGene/ancestor/tree/master/tests/data folder.
 
 
 How-To
@@ -25,10 +26,21 @@ The command line can run ancestry analysis for a given genotype and optionally c
       $ ancestor --weights weights.csv --hapmap hapmap.hdf5 --pcs hapmap_pcs.hdf5 --plot ancestry.png genotype.hdf5
 
 If the --pcs parameter is specified it will store the calculated PCs for all individuals in the Hapmap dataset.
-The next time ancestry is run for another genotype, the cached version can be used:
+The next time ancestry is run for another genotype, the cached version can be used::
 
       $ ancestor --weights weights.csv --pcs hapmap_pcs.hdf5 --plot ancestry.png genotype.hdf5
 
+Alternatively the weights can also be provided as in an hdf5 format::
+
+      $ ancestor --weights weights.hdf5 --pcs hapmap_pcs.hdf5 --plot ancestry.png genotype.hdf5
+
+
+Test
+-------------
+
+The test suite can be run with::
+
+      $ python setup.py test
 
 Installation
 --------------
