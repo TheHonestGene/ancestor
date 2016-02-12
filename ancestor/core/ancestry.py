@@ -149,8 +149,6 @@ def calculate_hapmap_pcs(hapmap_file, pc_weights_dict, snps_filter=None):
     :param snps_filter: list of snp-ids to subset (optional)
     :return: dictionary with pcs and number of snps that were used
     """
-    assert not pc_weights_file or not pc_weights_file
-
     log.info('Calculating Principal components for Hapmap file %s' % hapmap_file)
     ok_sids = sp.array(pc_weights_dict.keys())
     log.info('Loaded PC weight for %d SNPs' % (len(ok_sids)))
