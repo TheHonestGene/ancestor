@@ -13,6 +13,15 @@ stats_to_assert = {'shrinkage': [0.988256270989, 0.975872942881],
                                    'ASI': {'count': 169, 'meanpc': [0.041475739645, -0.0407165680473]}
                                    }
                    }
+                   
+ancestry_to_assert = {'pop_std': np.asarray([ 0.00059839,  0.00111145]), 
+    'pc2': -0.01174512492642139, 'is_in_population': True,
+    'ind_lim': np.asarray([  3.77975763e-08,   4.77972171e-07]),
+    'pop_lim': np.asarray([  3.22262193e-06,   1.11179861e-05]),
+    'pc1': -0.0070095622547185791,
+    'pop_mean':np.asarray([-0.00681515, -0.01105377]),
+    'population':'EUR'}
+
 
 
 def test_parse_weights_from_hdf5(weights_dict_hdf5):
@@ -38,6 +47,14 @@ def test_calc_genotype_pcs_from_hdf5_weights(weights_dict_hdf5):
     assert type(pcs_dict) == dict
     assert pcs_dict == {'pc1': -0.0070095622547185791, 'num_snps_used': 237399, 'pc2': -0.01174512492642139}
 
+def test_ancestry_analysis():
+    genotype_file = path.join(data_path, 'genotype.hdf5')
+    pcs_file = path.join(data_path, 'pcs.hdf5')
+    weights_file = path.join(data_path,'weights.hdf5')
+    ancestry_dict = an.ancestry_analysis(genotype_file,weights_file,pcs_file)
+    assert_ancestry_dict(ancestry_dict)
+     
+
 
 def assert_weights(weights_dict, length):
     assert type(weights_dict) == tuple
@@ -48,12 +65,20 @@ def assert_weights(weights_dict, length):
                       'pc2w': np.float32(4.9054e-07)}
     assert_stats(stats)
 
+def assert_ancestry_dict(ancestry_dict):
+    assert_almost_equal(ancestry_dict['pop_std'],ancestry_to_assert['pop_std'])
+    assert_almost_equal(ancestry_dict['ind_lim'],ancestry_to_assert['ind_lim'])
+    assert_almost_equal(ancestry_dict['pop_lim'],ancestry_to_assert['pop_lim'])
+    assert_almost_equal(ancestry_dict['pop_mean'],ancestry_to_assert['pop_mean'])
+    assert ancestry_dict['pc1'] == ancestry_to_assert['pc1']
+    assert ancestry_dict['pc2'] == ancestry_to_assert['pc2']
+    assert ancestry_dict['is_in_population'] == ancestry_to_assert['is_in_population']
+    assert ancestry_dict['population'] == ancestry_to_assert['population']
 
 def assert_stats(stats):
-    assert_almost_equal(stats['shrinkage'], stats_to_assert['shrinkage'])
-    assert_almost_equal(stats['linear_transform'], stats_to_assert['linear_transform'])
+    assert stats['shrinkage'] == stats_to_assert['shrinkage']
+    assert stats['linear_transform'] == stats_to_assert['linear_transform']
     for population in ('YRI', 'CEU', 'ASI'):
-        assert_almost_equal(stats['populations'][population]['meanpc'],
-                            stats_to_assert['populations'][population]['meanpc'])
+        assert stats['populations'][population]['meanpc'] == stats_to_assert['populations'][population]['meanpc']
         assert int(stats['populations'][population]['count']) == int(
                 stats_to_assert['populations'][population]['count'])

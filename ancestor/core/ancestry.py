@@ -26,13 +26,13 @@ def _parse_pc_weights_from_text(pc_weights_file):
     sid_dict = {}
     log.info('Parsing weights file %s' % pc_weights_file)
     with open(pc_weights_file) as f:
-        shrinkage = map(float, f.readline().split())
+        shrinkage = list(map(float, f.readline().split()))
         populations = {pop: {'count': count} for (pop, count) in
-                       zip(f.readline().split(), map(int, f.readline().split()))}
+                       zip(f.readline().split(), list(map(int, f.readline().split())))}
         l = f.readline().split()
         for i in range(0, len(l), 3):
-            populations[l[i]]['meanpc'] = map(float, [l[i + 1], l[i + 2]])
-        linear_transform = map(float, f.readline().split())
+            populations[l[i]]['meanpc'] = list(map(float, [l[i + 1], l[i + 2]]))
+        linear_transform = list(map(float, f.readline().split()))
         for line in f:
             l = line.split()
             sid = l[0]
@@ -41,7 +41,6 @@ def _parse_pc_weights_from_text(pc_weights_file):
             pc1w = np.float32(l[4])
             pc2w = np.float32(l[5])
             sid_dict[sid.encode('latin-1')] = {'pc1w': pc1w, 'pc2w': pc2w, 'mean_g': mean_g, 'nts': nts}
-
     return sid_dict, {'populations': populations, 'shrinkage': shrinkage, 'linear_transform': linear_transform}
 
 
@@ -241,6 +240,7 @@ def ancestry_analysis(genotype_file,weights_file,pcs_file,check_population='EUR'
     pc1 = genotype_pcs['pc1']
     pc2 = genotype_pcs['pc2']
     ancestry_dict = check_in_population(pcs[filter], pc1, pc2)
+    ancestry_dict['population'] = check_population
     return ancestry_dict
 
 def check_in_population(pcs, pc1, pc2):
@@ -259,7 +259,7 @@ def check_in_population(pcs, pc1, pc2):
     ind_lim = (ind_pcs - pop_mean) ** 2
     is_in_population = sp.any(ind_lim ** 2 < pop_lim)
     return {'pop_lim': pop_lim, 'pop_mean': pop_mean, 'pop_std': pop_std, 'ind_lim': ind_lim,
-            'is_in_population': is_in_population}
+            'is_in_population': is_in_population,'pc1':pc1,'pc2':pc2}
 
 
 def plot_pcs(plot_file, pcs, populations, genotype_pcs_dict=None):
