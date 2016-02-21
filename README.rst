@@ -54,4 +54,4 @@ Thank You
 
 Thanks for checking this library out! We hope you find it useful.
 
-Of course, there's always room for improvement. Feel free to `open an issue <https://github.com/TheHonestGene/ancestor/issues>`_ so we can make Imputor better.
+Of course, there's always room for improvement. Feel free to `open an issue <https://github.com/TheHonestGene/ancestor/issues>`_ so we can make it better.
