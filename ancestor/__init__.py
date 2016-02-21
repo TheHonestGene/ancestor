@@ -94,17 +94,17 @@ def run(args):
     eur_filter = populations['EUR']
     pc1 = genotype_pcs['pc1']
     pc2 = genotype_pcs['pc2']
-    ancestry_dict = an.check_european(pcs[eur_filter], pc1, pc2)
-    eur_mean_PC1, eur_mean_PC2 = ancestry_dict['eur_mean'].tolist()
-    eur_std_PC1, eur_std_PC2 = ancestry_dict['eur_std'].tolist()
-    eur_lim_PC1, eur_lim_PC2 = ancestry_dict['eur_lim'].tolist()
+    ancestry_dict = an.check_in_population(pcs[eur_filter], pc1, pc2)
+    eur_mean_PC1, eur_mean_PC2 = ancestry_dict['pop_mean'].tolist()
+    eur_std_PC1, eur_std_PC2 = ancestry_dict['pop_std'].tolist()
+    eur_lim_PC1, eur_lim_PC2 = ancestry_dict['pop_lim'].tolist()
     ind_lim_PC1, ind_lim_PC2 = ancestry_dict['ind_lim'].tolist()
 
     log.debug('European mean: PC1: %.6f, PC2: %.6f and std: PC1 :%.6f, PC2: %.6f' % (
         eur_mean_PC1, eur_mean_PC2, eur_std_PC1, eur_std_PC2))
     log.debug('PC1: %.6f and PC2: %.6f' % (pc1, pc2))
 
-    if ancestry_dict['is_non_european']:
+    if not ancestry_dict['is_in_population']:
         log.warn(
                 'Sample appears to contain some non-European ancestry (%.6f,%.6f > %.6f,%.6f).  This means that current genetic predictions are probably not accurate.' % (
                     ind_lim_PC1, ind_lim_PC2, eur_lim_PC1, eur_lim_PC2))

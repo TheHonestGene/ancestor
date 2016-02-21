@@ -227,23 +227,39 @@ def load_pcs_from_file(input_file):
             'pcs': pcs}
 
 
-def check_european(eur_pcs, pc1, pc2):
+def ancestry_analysis(genotype_file,weights_file,pcs_file,check_population='EUR'):
     """
-    Check if PC1 and PC2 are within the european PCs
-    :param eur_pcs:
+    Returns if 
+    """
+    weight_dict,stats = parse_pc_weights(weights_file)
+    hapmap_pcs_dict = load_pcs_from_file(pcs_file)
+    genotype_pcs = calc_genotype_pcs(genotype_file, weight_dict)
+    pcs = hapmap_pcs_dict['pcs']
+    populations = hapmap_pcs_dict['populations']
+    
+    filter = populations[check_population]
+    pc1 = genotype_pcs['pc1']
+    pc2 = genotype_pcs['pc2']
+    ancestry_dict = check_in_population(pcs[filter], pc1, pc2)
+    return ancestry_dict
+
+def check_in_population(pcs, pc1, pc2):
+    """
+    Check if PC1 and PC2 are within the populations' PCs
+    :param pcs: pcs of the population
     :param pc1: PC1 of the individual
     :param pc2: PC2 of the individual
     :return: Dictionary with various statistics
     """
     # Report ancestry.
-    eur_mean = sp.mean(eur_pcs, 0)
-    eur_stds = sp.std(eur_pcs, 0)
-    eur_lim = (3 * eur_stds) ** 2
+    pop_mean = sp.mean(pcs, 0)
+    pop_std = sp.std(pcs, 0)
+    pop_lim = (3 * pop_std) ** 2
     ind_pcs = sp.array([pc1, pc2])
-    ind_lim = (ind_pcs - eur_mean) ** 2
-    is_non_european = sp.any(ind_lim ** 2 > eur_lim)
-    return {'eur_lim': eur_lim, 'eur_mean': eur_mean, 'eur_std': eur_stds, 'ind_lim': ind_lim,
-            'is_non_european': is_non_european}
+    ind_lim = (ind_pcs - pop_mean) ** 2
+    is_in_population = sp.any(ind_lim ** 2 < pop_lim)
+    return {'pop_lim': pop_lim, 'pop_mean': pop_mean, 'pop_std': pop_std, 'ind_lim': ind_lim,
+            'is_in_population': is_in_population}
 
 
 def plot_pcs(plot_file, pcs, populations, genotype_pcs_dict=None):
