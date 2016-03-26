@@ -106,20 +106,24 @@ def save_pc_weights(weights, stats, output_file):
     gh5f.close()
 
 
-def calc_genotype_pcs(genotype_file, weight_dict):
+def calc_genotype_pcs(genotype_file, weight_dict,**kwargs):
     """
     Calculate the principal components for a given genotype using the specified weights
 
     :param genotype_file: the genotype file for which the principal components should be calculated
     :param weight_dict: dictionary with SNP weights
     """
+    log_extra = kwargs.get('log_extra',{'progress':0})
+    partial_progress_inc = (100-log_extra['progress'])/22
+    
     gh5f = h5py.File(genotype_file, 'r')
     num_nt_issues = 0
     num_snps_used = 0
     log.info('Calculating Principal Components for genotype file %s' % genotype_file)
     pcs = sp.zeros((1, 2))
     for chrom in range(1, 23):
-        log.info('Working on Chromosome %d' % chrom)
+        log_extra['progress']+=partial_progress_inc
+        log.info('Working on Chromosome %d' % chrom,extra=log_extra)
 
         chrom_str = 'Chr%d' % chrom
         g_cg = gh5f[chrom_str]
@@ -226,13 +230,13 @@ def load_pcs_from_file(input_file):
             'pcs': pcs}
 
 
-def ancestry_analysis(genotype_file,weights_file,pcs_file,check_population='EUR'):
+def ancestry_analysis(genotype_file,weights_file,pcs_file,check_population='EUR',**kwargs):
     """
     Returns if 
     """
     weight_dict,stats = parse_pc_weights(weights_file)
     hapmap_pcs_dict = load_pcs_from_file(pcs_file)
-    genotype_pcs = calc_genotype_pcs(genotype_file, weight_dict)
+    genotype_pcs = calc_genotype_pcs(genotype_file, weight_dict,**kwargs)
     pcs = hapmap_pcs_dict['pcs']
     populations = hapmap_pcs_dict['populations']
     
