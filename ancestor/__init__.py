@@ -88,7 +88,7 @@ def run(args):
         if args['pcs_file'] is not None:
             an.save_hapmap_pcs(hapmap_pcs_dict['pcs'],hapmap_pcs_dict['populations'], args['pcs_file'])
     genotype_pcs = an.calc_genotype_pcs(genotype_file, weight_dict)
-
+    
     pcs = hapmap_pcs_dict['pcs']
     populations = hapmap_pcs_dict['populations']
     eur_filter = populations['EUR']
@@ -128,7 +128,7 @@ def _get_populations_from_hapmap(hapmap_file):
     f = h5py.File(hapmap_file, 'r')
     populations = {}
     for population in ['EUR', 'SAS', 'AMR', 'AFR', 'EAS']:
-        populations[population] = f['indivs']['continent'][...] == population
+        populations[population] = f['indivs']['continent'][...] == population.encode() # py3 fix
     f.close()
     return populations
 

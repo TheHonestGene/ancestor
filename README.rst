@@ -23,16 +23,16 @@ How-To
 
 The command line can run ancestry analysis for a given genotype and optionally create a plot of the PC space.::
 
-      $ ancestor --weights weights.csv --hapmap hapmap.hdf5 --pcs hapmap_pcs.hdf5 --plot ancestry.png genotype.hdf5
+      $ ancestor --hapmap hapmap.hdf5 --pcs hapmap_pcs.hdf5 --plot ancestry.png genotype.hdf5 weights.csv
 
 If the --pcs parameter is specified it will store the calculated PCs for all individuals in the Hapmap dataset.
 The next time ancestry is run for another genotype, the cached version can be used::
 
-      $ ancestor --weights weights.csv --pcs hapmap_pcs.hdf5 --plot ancestry.png genotype.hdf5
+      $ ancestor --pcs hapmap_pcs.hdf5 --plot ancestry.png genotype.hdf5 weights.csv 
 
 Alternatively the weights can also be provided as in an hdf5 format::
 
-      $ ancestor --weights weights.hdf5 --pcs hapmap_pcs.hdf5 --plot ancestry.png genotype.hdf5
+      $ ancestor --pcs hapmap_pcs.hdf5 --plot ancestry.png genotype.hdf5 weights.hdf5
 
 
 Test

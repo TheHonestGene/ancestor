@@ -153,7 +153,7 @@ def calculate_hapmap_pcs(hapmap_file, pc_weights_dict, snps_filter=None):
     :return: dictionary with pcs and number of snps that were used
     """
     log.info('Calculating Principal components for Hapmap file %s' % hapmap_file)
-    ok_sids = sp.array(pc_weights_dict.keys())
+    ok_sids = np.asarray(list(pc_weights_dict.keys()))
     log.info('Loaded PC weight for %d SNPs' % (len(ok_sids)))
     # Load genotypes
     log.info('Load Hapmap dataset')
