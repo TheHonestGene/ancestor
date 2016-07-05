@@ -12,10 +12,10 @@ or import it into their python library
 Requirements
 ***********
 
-The ancestry relies on the 1000 Genomes HapMap dataset.
+The ancestry relies on the 1000 Genomes dataset.
 The dataset has to be provided as an HDF5 file and be in a specific format
 
-To play around pcs files, a test genotype and the weights in HDF5 (calculated based on the above 1000 genomes HapMap dataset) format can be found in the https://github.com/TheHonestGene/ancestor/tree/master/tests/data folder.
+To play around pcs files, a test genotype and the weights in HDF5 (calculated based on the above 1000 genomes dataset) format can be found in the https://github.com/TheHonestGene/ancestor/tree/master/tests/data folder.
 
 
 How-To
