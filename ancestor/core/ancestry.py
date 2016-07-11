@@ -30,7 +30,8 @@ def _parse_pc_weights_from_text(pc_weights_file):
         populations = {pop: {'count': count} for (pop, count) in
                        zip(f.readline().split(), list(map(int, f.readline().split())))}
         l = f.readline().split()
-        for i in range(0, len(l), 3):
+        num_pops = len(populations)
+        for i in range(0, len(l), num_pops):
             populations[l[i]]['meanpc'] = list(map(float, [l[i + 1], l[i + 2]]))
         linear_transform = list(map(float, f.readline().split()))
         for line in f:
@@ -45,6 +46,9 @@ def _parse_pc_weights_from_text(pc_weights_file):
 
 
 def _parse_pc_weights_from_hdf5(pc_weights_file):
+    """
+    Loads the SNP weights dict!
+    """
     gh5f = h5py.File(pc_weights_file, 'r')
     weights = {}
     attrs = gh5f.attrs;
@@ -74,7 +78,7 @@ def _parse_pc_weights_from_hdf5(pc_weights_file):
 
 def save_pc_weights(weights, stats, output_file):
     """
-    Save the weights and stats in an HDF5 file
+    Save the SNP weights and stats in an HDF5 file
 
     :param weights: dictionary with weights
     :param stats: general statistics from the weights file
@@ -106,58 +110,58 @@ def save_pc_weights(weights, stats, output_file):
     gh5f.close()
 
 
-def calc_genotype_pcs(genotype_file, weight_dict,**kwargs):
+# def calc_genotype_pcs(genotype_file, weight_dict,**kwargs):
+#     """
+#     Calculate the principal components for a given genotype using the specified weights
+# 
+#     :param genotype_file: the genotype file for which the principal components should be calculated
+#     :param weight_dict: dictionary with SNP weights
+#     """
+#     log_extra = kwargs.get('log_extra',{'progress':0})
+#     partial_progress_inc = (100-log_extra['progress'])/22
+#     
+#     gh5f = h5py.File(genotype_file, 'r')
+#     num_nt_issues = 0
+#     num_snps_used = 0
+#     log.info('Calculating Principal Components for genotype file %s' % genotype_file)
+#     pcs = sp.zeros((1, 2))
+#     for chrom in range(1, 23):
+#         log_extra['progress']+=partial_progress_inc
+#         log.info('Working on Chromosome %d' % chrom,extra=log_extra)
+# 
+#         chrom_str = 'Chr%d' % chrom
+#         g_cg = gh5f[chrom_str]
+# 
+#         # Loading data
+#         sids = g_cg['sids'][...]
+#         nts = g_cg['nts'][...]
+#         length = len(g_cg['snps'])
+#         snps = g_cg['snps'][...].reshape((length, 1))
+#         pcs_per_chr = _calc_pcs(weight_dict, sids, nts, snps)
+#         pcs += pcs_per_chr['pcs']
+#         num_snps_used += pcs_per_chr['num_snps_used']
+#         num_nt_issues += pcs_per_chr['num_nt_issues']
+#     gh5f.close()
+#     log.info('%d SNPs were excluded from the analysis due to nucleotide issues.' % (num_nt_issues))
+#     log.info('Number of SNPs uesd for PC projection: %d' % num_snps_used)
+#     return {'pc1': pcs[0][0], 'pc2': pcs[0][1], 'num_snps_used': num_snps_used}
+
+
+def calculate_genot_pcs(genot_file, pc_weights_dict, snps_filter=None):
     """
-    Calculate the principal components for a given genotype using the specified weights
-
-    :param genotype_file: the genotype file for which the principal components should be calculated
-    :param weight_dict: dictionary with SNP weights
-    """
-    log_extra = kwargs.get('log_extra',{'progress':0})
-    partial_progress_inc = (100-log_extra['progress'])/22
-    
-    gh5f = h5py.File(genotype_file, 'r')
-    num_nt_issues = 0
-    num_snps_used = 0
-    log.info('Calculating Principal Components for genotype file %s' % genotype_file)
-    pcs = sp.zeros((1, 2))
-    for chrom in range(1, 23):
-        log_extra['progress']+=partial_progress_inc
-        log.info('Working on Chromosome %d' % chrom,extra=log_extra)
-
-        chrom_str = 'Chr%d' % chrom
-        g_cg = gh5f[chrom_str]
-
-        # Loading data
-        sids = g_cg['sids'][...]
-        nts = g_cg['nts'][...]
-        length = len(g_cg['snps'])
-        snps = g_cg['snps'][...].reshape((length, 1))
-        pcs_per_chr = _calc_pcs(weight_dict, sids, nts, snps)
-        pcs += pcs_per_chr['pcs']
-        num_snps_used += pcs_per_chr['num_snps_used']
-        num_nt_issues += pcs_per_chr['num_nt_issues']
-    gh5f.close()
-    log.info('%d SNPs were excluded from the analysis due to nucleotide issues.' % (num_nt_issues))
-    log.info('Number of SNPs uesd for PC projection: %d' % num_snps_used)
-    return {'pc1': pcs[0][0], 'pc2': pcs[0][1], 'num_snps_used': num_snps_used}
-
-
-def calculate_hapmap_pcs(hapmap_file, pc_weights_dict, snps_filter=None):
-    """
-    Calculates the principal components for the hapmap project
+    Calculates the principal components for the given genotypes
 
     :param hapmap_file: Hapmap file in HDF5 format
     :param pc_weights_dict: dictionary with SNP weights (key = snpid)
     :param snps_filter: list of snp-ids to subset (optional)
     :return: dictionary with pcs and number of snps that were used
     """
-    log.info('Calculating Principal components for Hapmap file %s' % hapmap_file)
+    log.info('Calculating Principal components for genotype file %s' % genot_file)
     ok_sids = np.asarray(list(pc_weights_dict.keys()))
     log.info('Loaded PC weight for %d SNPs' % (len(ok_sids)))
     # Load genotypes
-    log.info('Load Hapmap dataset')
-    h5f = h5py.File(hapmap_file, 'r')
+    log.info('Loading genotypes')
+    h5f = h5py.File(genot_file, 'r')
     num_indivs = len(h5f['indivs']['continent'][...])
     log.info('Found genotypes for %d individuals' % num_indivs)
     pcs = sp.zeros((num_indivs, 2))
@@ -323,3 +327,24 @@ def _calc_pcs(weight_dict, sids, nts, snps):
         num_snps_used += 1
 
     return {'num_snps_used': num_snps_used, 'num_nt_issues': num_nt_issues, 'pcs': pcs}
+
+
+def calc_admixture_decomp_mat(iids, pop_assignments, pcs):
+    
+    """
+    Precalculate a matrix that ise used to calculate admixture percentages efficiently.
+
+    Requirements:
+        - PCs
+        - Population assignments
+
+    Assumes:
+        - Same set of SNPs are used to PCs as predicting PCs.  This requires careful coordination of SNPs for each data version and PC genotypes.
+    """
+def calc_admixture(pred_pcs, admix_decom_mat):    
+    """
+    Get admixture decomp.  Predicted PCs correspond to the admix_decomp_mat.
+    """
+    admixture = sp.dot(pred_pcs, admix_decomp_mat)
+    assert sp.sum(admixture)==1, "Admixture doesn't sum to 1: "+str(admixture)
+    return admixture
