@@ -32,14 +32,15 @@ def _parse_pc_weights_from_text(pc_weights_file):
         l = f.readline().split()
         num_pops = len(populations)
         for i in range(0, len(l), num_pops):
-            populations[l[i]]['meanpc'] = list(map(float, [l[i + 1], l[i + 2]]))
+            populations[l[i]]['meanpc'] = list(map(float, l[i+1:i+num_pops+1]))
         linear_transform = list(map(float, f.readline().split()))
         for line in f:
             l = line.split()
             sid = l[0]
             nts = [l[1].encode('latin-1'), l[2].encode('latin-1')]
             mean_g = np.float32(l[3])
-            pc1w = np.float32(l[4])
+            pcs = map(l[4:])
+            pcs = np.float32(l[4])
             pc2w = np.float32(l[5])
             sid_dict[sid.encode('latin-1')] = {'pc1w': pc1w, 'pc2w': pc2w, 'mean_g': mean_g, 'nts': nts}
     return sid_dict, {'populations': populations, 'shrinkage': shrinkage, 'linear_transform': linear_transform}
