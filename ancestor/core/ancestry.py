@@ -144,7 +144,7 @@ def save_pc_weights(weights, stats, output_file):
 #     return {'pc1': pcs[0][0], 'pc2': pcs[0][1], 'num_snps_used': num_snps_used}
 
 
-def calculate_genot_pcs(genot_file, pc_weights_dict, continents = [], pop_assignments=None, snps_filter=None):
+def calculate_genot_pcs(genot_file, pc_weights_dict, continents_to_use = ['EUR','AFR','EAS'], pop_assignments=None, snps_filter=None):
     """
     Calculates the principal components for the given genotypes
 
@@ -159,9 +159,13 @@ def calculate_genot_pcs(genot_file, pc_weights_dict, continents = [], pop_assign
     # Load genotypes
     log.info('Loading genotypes')
     h5f = h5py.File(genot_file, 'r')
-    num_indivs = len(h5f['indivs']['continent'][...])
+    continents = h5f['indivs']['continent'][...]
+    indiv_filter = sp.in1d(continents, continents_to_use)
+    filtered_continents = continents[indiv_filter]
+    num_indivs = sp.sum(indiv_filter)
     log.info('Found genotypes for %d individuals' % num_indivs)
-    pcs = sp.zeros((num_indivs, 2))
+    num_pcs_to_use=len(continents)-1
+    pcs = sp.zeros((num_indivs, num_pcs_to_use))
     num_nt_issues = 0
     num_snps_used = 0
     log.info('Calculating PCs')
@@ -179,25 +183,35 @@ def calculate_genot_pcs(genot_file, pc_weights_dict, continents = [], pop_assign
 
         log.info('Loading SNPs')
         snps = h5f[chrom_str]['calldata']['snps'][...]
+        snps = snps[:,indiv_filter] #Filter individuals with certain ancestry for the analyses
+        
         snps = snps.compress(ok_snp_filter, axis=0)
         length = len(h5f[chrom_str]['variants/REF'])
         nts = np.hstack((h5f[chrom_str]['variants/REF'][:].reshape(length, 1),
                          h5f[chrom_str]['variants/ALT'][:].reshape(length, 1)))
         nts = nts.compress(ok_snp_filter, axis=0)
         log.info('Updating PCs')
-        pcs_per_chr = _calc_pcs(pc_weights_dict, sids, nts, snps)
+        pcs_per_chr = _calc_pcs(pc_weights_dict, sids, nts, snps, num_pcs_to_use)
         pcs += pcs_per_chr['pcs']
         num_nt_issues += pcs_per_chr['num_nt_issues']
         num_snps_used += pcs_per_chr['num_snps_used']
 
+    
+    log.info('%d Calculating average PC values for each population.' % (num_nt_issues))
+    cont_dict = {}
+    E = sp.ones((len(continents_to_use),len(continents_to_use)))  #The avg. pop. PCs matrix, used for admixture decomposition.
+    for cont in continents_to_use:
+        pop_filter = sp.in1d(filtered_continents, [cont])
+        pop_num_indivs = sp.sum(pop_filter)
+        avg_pcs = sp.mean(pcs[pop_filter])
+        cont_dict[cont]={'avg_pcs': avg_pcs,'num_indivs':pop_num_indivs}
+        
     h5f.close()
     log.info('%d SNPs were excluded from the analysis due to nucleotide issues.' % (num_nt_issues))
     log.info('%d SNPs were used for the analysis.' % (num_snps_used))
     
-    if pop_assignments is not None:
         
-        
-    return {'pcs': pcs, 'num_snps_used': num_snps_used}
+    return {'pcs': pcs, 'num_snps_used': num_snps_used, 'cont_dict':cont_dict}
 
 
 def save_hapmap_pcs(pcs, populations, output_file):
@@ -294,7 +308,7 @@ def plot_pcs(plot_file, pcs, populations, genotype_pcs_dict=None):
     pylab.savefig(plot_file)
 
 
-def _calc_pcs(weight_dict, sids, nts, snps):
+def _calc_pcs(weight_dict, sids, nts, snps, num_pcs_to_use):
     num_nt_issues = 0
     num_snps_used = 0
     num_indivs = snps.shape[1]
@@ -308,7 +322,8 @@ def _calc_pcs(weight_dict, sids, nts, snps):
         nt = nts[snp_i]
         snp = snps[snp_i]
         pc_weights = sp.array(d['pc_ws'])
-        pc_weights.shape = (1, len(pc_weights))
+        pc_weights = pc_weights[:num_pcs_to_use]
+        pc_weights.shape = (1, num_pcs_to_use)
         af = d['mean_g'] / 2.0
         if sp.all([nt[1], nt[0]] == d['nts']):
             # print 'Flip sign'
