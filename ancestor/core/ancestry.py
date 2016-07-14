@@ -70,6 +70,7 @@ def _parse_pc_weights_from_hdf5(pc_weights_file):
     nts = gh5f['nts'][...]
     mean_g = gh5f['mean_g'][...]
     pc_ws = gh5f['pc_ws'][...]
+    stats['num_pcs'] = len(pc_ws[0]) 
     for i, snpid in enumerate(snpids):
         weights[snpid] = {'pc_ws': pc_ws[i], 'mean_g': mean_g[i], 'nts': nts[i].tolist()}
     gh5f.close()
@@ -107,64 +108,78 @@ def save_pc_weights(weights, stats, output_file):
     gh5f.close()
 
 
-# def calc_genotype_pcs(genotype_file, weight_dict,**kwargs):
-#     """
-#     Calculate the principal components for a given genotype using the specified weights
-# 
-#     :param genotype_file: the genotype file for which the principal components should be calculated
-#     :param weight_dict: dictionary with SNP weights
-#     """
-#     log_extra = kwargs.get('log_extra',{'progress':0})
-#     partial_progress_inc = (100-log_extra['progress'])/22
-#     
-#     gh5f = h5py.File(genotype_file, 'r')
-#     num_nt_issues = 0
-#     num_snps_used = 0
-#     log.info('Calculating Principal Components for genotype file %s' % genotype_file)
-#     pcs = sp.zeros((1, 2))
-#     for chrom in range(1, 23):
-#         log_extra['progress']+=partial_progress_inc
-#         log.info('Working on Chromosome %d' % chrom,extra=log_extra)
-# 
-#         chrom_str = 'Chr%d' % chrom
-#         g_cg = gh5f[chrom_str]
-# 
-#         # Loading data
-#         sids = g_cg['sids'][...]
-#         nts = g_cg['nts'][...]
-#         length = len(g_cg['snps'])
-#         snps = g_cg['snps'][...].reshape((length, 1))
-#         pcs_per_chr = _calc_pcs(weight_dict, sids, nts, snps)
-#         pcs += pcs_per_chr['pcs']
-#         num_snps_used += pcs_per_chr['num_snps_used']
-#         num_nt_issues += pcs_per_chr['num_nt_issues']
-#     gh5f.close()
-#     log.info('%d SNPs were excluded from the analysis due to nucleotide issues.' % (num_nt_issues))
-#     log.info('Number of SNPs uesd for PC projection: %d' % num_snps_used)
-#     return {'pc1': pcs[0][0], 'pc2': pcs[0][1], 'num_snps_used': num_snps_used}
-
-
-def calculate_genot_pcs(genot_file, pc_weights_dict, continents_to_use = ['EUR','AFR','EAS'], pop_assignments=None, snps_filter=None):
+def calc_indiv_genot_pcs(genotype_file, weight_dict,**kwargs):
     """
-    Calculates the principal components for the given genotypes
+    Calculate the principal components for a given an individual genotype using the specified weights (
+ 
+    :param genotype_file: the genotype file for which the principal components should be calculated
+    :param weight_dict: dictionary with SNP weights
+    """
+    log_extra = kwargs.get('log_extra',{'progress':0})
+    partial_progress_inc = (100-log_extra['progress'])/22
+     
+    gh5f = h5py.File(genotype_file, 'r')
+    num_nt_issues = 0
+    num_snps_used = 0
+    log.info('Calculating Principal Components for genotype file %s' % genotype_file)
+    pcs = sp.zeros((1, 2))
+    for chrom in range(1, 23):
+        log_extra['progress']+=partial_progress_inc
+        log.info('Working on Chromosome %d' % chrom,extra=log_extra)
+ 
+        chrom_str = 'Chr%d' % chrom
+        g_cg = gh5f[chrom_str]
+ 
+        # Loading data
+        sids = g_cg['sids'][...]
+        nts = g_cg['nts'][...]
+        length = len(g_cg['snps'])
+        snps = g_cg['snps'][...].reshape((length, 1))
+        pcs_per_chr = _calc_pcs(weight_dict, sids, nts, snps)
+        pcs += pcs_per_chr['pcs']
+        num_snps_used += pcs_per_chr['num_snps_used']
+        num_nt_issues += pcs_per_chr['num_nt_issues']
+        
+    gh5f.close()
+    log.info('%d SNPs were excluded from the analysis due to nucleotide issues.' % (num_nt_issues))
+    log.info('Number of SNPs uesd for PC projection: %d' % num_snps_used)
+    return {'pcs': pcs, 'num_snps_used': num_snps_used}
+
+
+
+
+def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = ['EUR','AFR','EAS'], snps_filter=None):
+    """
+    Calculates:
+        - The principal components for the given genotype dataset.
+        - The admixture decomposition matrix given the populations.
 
     :param genot_file: Genotype file in HDF5 format
     :param pc_weights_dict: dictionary with SNP weights (key = snpid)
+    :param pc_stats: statistics about the PC SNP weights. 
+    :param populations_to_use: Populations that we plan to use for the PC plot and the admixture decomposition. 
     :param snps_filter: list of snp-ids to subset (optional)
     :return: dictionary with pcs and number of snps that were used
+    
     """
+    assert len(populations_to_use)<=pc_stats['num_pcs']-1, 'There are not sufficiently many PCs to separate the populations.'
+    
     log.info('Calculating Principal components for genotype file %s' % genot_file)
     ok_sids = np.asarray(list(pc_weights_dict.keys()))
     log.info('Loaded PC weight for %d SNPs' % (len(ok_sids)))
     # Load genotypes
     log.info('Loading genotypes')
     h5f = h5py.File(genot_file, 'r')
-    continents = h5f['indivs']['continent'][...]
-    indiv_filter = sp.in1d(continents, continents_to_use)
-    filtered_continents = continents[indiv_filter]
+
+#     populations = h5f['indivs']['populations'][...]
+    populations = h5f['indivs']['continent'][...]  #Currently this is using continents, but we can/should switch to populations.  
+    #We should also consider to allow us to combine multiple populations in one group, or something like that. 
+    
+    indiv_filter = sp.in1d(populations, populations_to_use)
+    filtered_populations = populations[indiv_filter]
     num_indivs = sp.sum(indiv_filter)
     log.info('Found genotypes for %d individuals' % num_indivs)
-    num_pcs_to_use=len(continents)-1
+    num_pcs_to_use=len(populations)-1
     pcs = sp.zeros((num_indivs, num_pcs_to_use))
     num_nt_issues = 0
     num_snps_used = 0
@@ -198,34 +213,42 @@ def calculate_genot_pcs(genot_file, pc_weights_dict, continents_to_use = ['EUR',
 
     
     log.info('%d Calculating average PC values for each population.' % (num_nt_issues))
-    cont_dict = {}
-    E = sp.ones((len(continents_to_use),len(continents_to_use)))  #The avg. pop. PCs matrix, used for admixture decomposition.
-    for cont in continents_to_use:
-        pop_filter = sp.in1d(filtered_continents, [cont])
+    avg_pcs_dict= {}
+    num_indiv_dict = {}
+    num_continents_to_use = len(populations_to_use)
+    E = sp.empty(num_continents_to_use,num_continents_to_use,dtype='float32')  #The avg. pop. PCs matrix, used for admixture decomposition.
+    for i in range(num_continents_to_use):
+        popul = populations_to_use[i]
+        pop_filter = sp.in1d(filtered_populations, [popul])
         pop_num_indivs = sp.sum(pop_filter)
         avg_pcs = sp.mean(pcs[pop_filter])
-        cont_dict[cont]={'avg_pcs': avg_pcs,'num_indivs':pop_num_indivs}
-        
+        avg_pcs_dict[popul]=avg_pcs
+        num_indiv_dict[popul]=pop_num_indivs
+        E[i]=sp.concatenate((avg_pcs,[1.0]))
+    
+    #For decomposition of admixture, we assume that the same set of SNPs are used.
+    pop_dict = {'admix_decom_mat': E.I, 'populations':populations_to_use, 'avg_pcs':avg_pcs_dict, 'num_indivs':num_indiv_dict}  
     h5f.close()
     log.info('%d SNPs were excluded from the analysis due to nucleotide issues.' % (num_nt_issues))
     log.info('%d SNPs were used for the analysis.' % (num_snps_used))
     
-        
-    return {'pcs': pcs, 'num_snps_used': num_snps_used, 'cont_dict':cont_dict}
+    return {'pcs': pcs, 'num_snps_used': num_snps_used, 'pop_dict':pop_dict}
 
 
-def save_hapmap_pcs(pcs, populations, output_file):
+def save_pcs_admixture_info(pcs, pop_dict, output_file):
     """
     Saves the hapmap pcs in an HDF5 file
     :param output_file: HDF5 file the pcs should be written to
     :param pcs: principal components
-    :param populations: dictionary with various populations masks
+    :param pop_dict: dictionary with various populations information
     """
-    log.info('Saving HapMap PCs in %s ' % output_file)
+    log.info('Saving genotype PCs in %s ' % output_file)
     # Store coordinates
     oh5f = h5py.File(output_file, 'w')
     oh5f.create_dataset('pcs', data=pcs)
     pop_g = oh5f.create_group('populations')
+    #FINSIH THIS
+    
     for population, mask in populations.items():
         pop_g.create_dataset(population, data=mask)
     oh5f.close()
@@ -260,11 +283,12 @@ def ancestry_analysis(genotype_file,weights_file,pcs_file,check_population='EUR'
     populations = hapmap_pcs_dict['populations']
     
     filter = populations[check_population]
-    pc1 = genotype_pcs['pc1']
+    pcs = genotype_pcs['pc1']
     pc2 = genotype_pcs['pc2']
     ancestry_dict = check_in_population(pcs[filter], pc1, pc2)
     ancestry_dict['population'] = check_population
     return ancestry_dict
+
 
 def check_in_population(pcs, pc1, pc2):
     """
@@ -345,18 +369,6 @@ def _calc_pcs(weight_dict, sids, nts, snps, num_pcs_to_use):
     return {'num_snps_used': num_snps_used, 'num_nt_issues': num_nt_issues, 'pcs': pcs}
 
 
-def calc_admixture_decomp_mat(iids, pop_assignments, pcs):
-    
-    """
-    Precalculate a matrix that ise used to calculate admixture percentages efficiently.
-
-    Requirements:
-        - PCs
-        - Population assignments
-
-    Assumes:
-        - Same set of SNPs are used to PCs as predicting PCs.  This requires careful coordination of SNPs for each data version and PC genotypes.
-    """
 def calc_admixture(pred_pcs, admix_decom_mat):    
     """
     Get admixture decomp.  Predicted PCs correspond to the admix_decomp_mat.
