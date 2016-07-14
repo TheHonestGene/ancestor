@@ -39,11 +39,11 @@ def _parse_pc_weights_from_text(pc_weights_file):
             sid = l[0]
             nts = [l[1].encode('latin-1'), l[2].encode('latin-1')]
             mean_g = np.float32(l[3])
-            pcs = map(l[4:])
-            pcs = np.float32(l[4])
-            pc2w = np.float32(l[5])
-            sid_dict[sid.encode('latin-1')] = {'pc1w': pc1w, 'pc2w': pc2w, 'mean_g': mean_g, 'nts': nts}
-    return sid_dict, {'populations': populations, 'shrinkage': shrinkage, 'linear_transform': linear_transform}
+            pc_ws = list(map(float,(l[4:])))
+            sid_dict[sid.encode('latin-1')] = {'pc_ws': pc_ws, 'mean_g': mean_g, 'nts': nts}
+        num_pcs = len(pc_ws)
+        assert num_pcs == num_pops-1, 'WTF?'
+    return sid_dict, {'populations': populations, 'shrinkage': shrinkage, 'linear_transform': linear_transform, 'num_pcs':num_pcs}
 
 
 def _parse_pc_weights_from_hdf5(pc_weights_file):
@@ -66,13 +66,12 @@ def _parse_pc_weights_from_hdf5(pc_weights_file):
             populations[population] = {}
         populations[population][key_s[1]] = value.tolist()
     stats['populations'] = populations
-    snpids = gh5f['snpid'][:]
-    nts = gh5f['nts'][:]
-    mean_g = gh5f['mean_g'][:]
-    pc1w = gh5f['pc1w'][:]
-    pc2w = gh5f['pc2w'][:]
+    snpids = gh5f['snpid'][...]
+    nts = gh5f['nts'][...]
+    mean_g = gh5f['mean_g'][...]
+    pc_ws = gh5f['pc_ws'][...]
     for i, snpid in enumerate(snpids):
-        weights[snpid] = {'pc1w': pc1w[i], 'pc2w': pc2w[i], 'mean_g': mean_g[i], 'nts': nts[i].tolist()}
+        weights[snpid] = {'pc_ws': pc_ws[i], 'mean_g': mean_g[i], 'nts': nts[i].tolist()}
     gh5f.close()
     return weights, stats
 
@@ -89,8 +88,7 @@ def save_pc_weights(weights, stats, output_file):
     snpids = []
     nts = []
     mean_g = []
-    pc1w = []
-    pc2w = []
+    pc_ws = []
     gh5f.attrs['linear_transform'] = stats['linear_transform']
     gh5f.attrs['shrinkage'] = stats['shrinkage']
     for population, value in stats['populations'].items():
@@ -101,13 +99,11 @@ def save_pc_weights(weights, stats, output_file):
         snpids.append(snpid)
         nts.append(value['nts'])
         mean_g.append(value['mean_g'])
-        pc1w.append(value['pc1w'])
-        pc2w.append(value['pc2w'])
+        pc_ws.append(value['pc_ws'])
     gh5f.create_dataset('snpid', data=snpids, chunks=True, compression='lzf')
     gh5f.create_dataset('nts', data=np.asarray(nts), chunks=True, compression='lzf')
     gh5f.create_dataset('mean_g', data=np.asarray(mean_g, dtype='f4'), chunks=True, compression='lzf')
-    gh5f.create_dataset('pc1w', data=np.asarray(pc1w, dtype='f4'), chunks=True, compression='lzf')
-    gh5f.create_dataset('pc2w', data=np.asarray(pc2w, dtype='f4'), chunks=True, compression='lzf')
+    gh5f.create_dataset('pc_ws', data=np.asarray(pc_ws, dtype='f4'), chunks=True, compression='lzf')
     gh5f.close()
 
 
@@ -148,11 +144,11 @@ def save_pc_weights(weights, stats, output_file):
 #     return {'pc1': pcs[0][0], 'pc2': pcs[0][1], 'num_snps_used': num_snps_used}
 
 
-def calculate_genot_pcs(genot_file, pc_weights_dict, snps_filter=None):
+def calculate_genot_pcs(genot_file, pc_weights_dict, continents = [], pop_assignments=None, snps_filter=None):
     """
     Calculates the principal components for the given genotypes
 
-    :param hapmap_file: Hapmap file in HDF5 format
+    :param genot_file: Genotype file in HDF5 format
     :param pc_weights_dict: dictionary with SNP weights (key = snpid)
     :param snps_filter: list of snp-ids to subset (optional)
     :return: dictionary with pcs and number of snps that were used
@@ -197,6 +193,10 @@ def calculate_genot_pcs(genot_file, pc_weights_dict, snps_filter=None):
     h5f.close()
     log.info('%d SNPs were excluded from the analysis due to nucleotide issues.' % (num_nt_issues))
     log.info('%d SNPs were used for the analysis.' % (num_snps_used))
+    
+    if pop_assignments is not None:
+        
+        
     return {'pcs': pcs, 'num_snps_used': num_snps_used}
 
 
@@ -307,8 +307,8 @@ def _calc_pcs(weight_dict, sids, nts, snps):
             continue
         nt = nts[snp_i]
         snp = snps[snp_i]
-        pc_weights = sp.array([d['pc1w'], d['pc2w']])
-        pc_weights.shape = (1, 2)
+        pc_weights = sp.array(d['pc_ws'])
+        pc_weights.shape = (1, len(pc_weights))
         af = d['mean_g'] / 2.0
         if sp.all([nt[1], nt[0]] == d['nts']):
             # print 'Flip sign'
