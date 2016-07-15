@@ -315,7 +315,7 @@ def ancestry_analysis(genotype_file, weights_file, pcs_file, check_population='E
         
     """
     weight_dict, stats_dict = parse_pc_weights(weights_file)
-    genotype_d = calc_indiv_genot_pcs(genotype_file, weight_dict, num_pcs=stats_dict['num_pcs'], **kwargs)
+    genotype_d = calc_indiv_genot_pcs(genotype_file, weight_dict, stats_dict['num_pcs'], **kwargs)
     genotype_pcs = genotype_d['pcs'][0]
 
     pcs_admixture_dict = load_pcs_admixture_info(pcs_file)
