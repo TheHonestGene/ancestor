@@ -110,7 +110,7 @@ def save_pc_weights(weights, stats, output_file):
     gh5f.close()
 
 
-def calc_indiv_genot_pcs(genotype_file, weight_dict,**kwargs):
+def calc_indiv_genot_pcs(genotype_file, weight_dict, num_pcs_to_uses,**kwargs):
     """
     Calculate the principal components for a given an individual genotype using the specified weights (
  
@@ -137,7 +137,7 @@ def calc_indiv_genot_pcs(genotype_file, weight_dict,**kwargs):
         nts = g_cg['nts'][...]
         length = len(g_cg['snps'])
         snps = g_cg['snps'][...].reshape((length, 1))
-        pcs_per_chr = _calc_pcs(weight_dict, sids, nts, snps)
+        pcs_per_chr = _calc_pcs(weight_dict, sids, nts, snps, num_pcs_to_uses)
         pcs += pcs_per_chr['pcs']
         num_snps_used += pcs_per_chr['num_snps_used']
         num_nt_issues += pcs_per_chr['num_nt_issues']
@@ -456,7 +456,7 @@ def _test_admixture_():
 
     # Calculate admixture for an individual
     print 'Calculate admixture for an individual.'
-    ancestry_results =  ancestry_analysis(indiv_genot_file, pc_weights_hdf5_file, ref_pcs_admix_file, check_population='EUR')
+    ancestry_results =  ancestry_analysis(indiv_genot_file, pc_weights_hdf5_file, ref_pcs_admix_file, num_pcs_to_uses=2, check_population='EUR')
     print ancestry_results
     
     #Plot PCs..
