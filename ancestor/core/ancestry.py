@@ -216,7 +216,7 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
             print 'Using %d individuals'%sp.sum(indiv_filter)
         
 #         length = len(h5f[chrom_str]['variants/REF'])
-        length == debug_cutoff
+        length = debug_cutoff
 #         nts = np.hstack((h5f[chrom_str]['variants/REF'][:].reshape(length, 1),
 #                          h5f[chrom_str]['variants/ALT'][:].reshape(length, 1)))
         nts = np.hstack((h5f[chrom_str]['variants/REF'][:debug_cutoff].reshape(length, 1),
