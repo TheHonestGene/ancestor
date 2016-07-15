@@ -434,7 +434,7 @@ def calc_admixture(pred_pcs, admix_decomp_mat):
 #For debugging purposes
 def _test_admixture_():
     pc_weights_file = '/faststorage/project/TheHonestGene/snpweights/snpwt.CEPH_whites'
-    pc_weights_hdf5_file = '/faststorage/project/TheHonestGene/snpweights/snpwt.CEPH_whites.hdf5'
+    pc_weights_hdf5_file = '/faststorage/project/TheHonestGene/snpweights/snpwt.CO.hdf5'
     nt_map_file = '/faststorage/project/TheHonestGene/data_for_pipeline/NT_DATA/23andme_v4_nt_map.pickled'
     pc_ref_genot_file = '/faststorage/project/TheHonestGene/data_for_pipeline/1k_genomes_hg.hdf5'
     indiv_genot_file = '/faststorage/project/TheHonestGene/prediction_data/23andme-genomes_imputed/3a9c0f27a91816e7.genome_imputed.hdf5'
