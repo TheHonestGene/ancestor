@@ -315,12 +315,13 @@ def ancestry_analysis(genotype_file, weights_file, pcs_file, check_population='E
         
     """
     weight_dict, stats_dict = parse_pc_weights(weights_file)
-    genotype_d = calc_indiv_genot_pcs(genotype_file, weight_dict, stats_dict['num_pcs'], **kwargs)
-    genotype_pcs = genotype_d['pcs'][0]
-
     pcs_admixture_dict = load_pcs_admixture_info(pcs_file)
     pcs = pcs_admixture_dict['pcs']
     pop_dict = pcs_admixture_dict['pop_dict']
+    print pop_dict['unique_populations']
+    genotype_d = calc_indiv_genot_pcs(genotype_file, weight_dict, len(pop_dict['unique_populations']), **kwargs)
+    genotype_pcs = genotype_d['pcs'][0]
+
     admixture = calc_admixture(genotype_pcs, pop_dict['admix_decom_mat'])
     
     pop_filter = sp.in1d(pop_dict['populations'],[check_population])
