@@ -2,6 +2,7 @@
 core functions to calculate ancestry
 """
 import scipy as sp
+from scipy import linalg
 import numpy as np
 import h5py
 import pylab
@@ -252,7 +253,7 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
         E[i]=sp.concatenate((avg_pcs,[1.0]))
     
     #For decomposition of admixture, we assume that the same set of SNPs are used.
-    pop_dict = {'admix_decom_mat': E.I, 'populations': filtered_populations, 'unique_populations':populations_to_use, 
+    pop_dict = {'admix_decom_mat': linalg.pinv(E), 'populations': filtered_populations, 'unique_populations':populations_to_use, 
                 'avg_pcs':sp.array(avg_pcs_list), 'num_indivs':num_indiv_list}  
     h5f.close()
     log.info('%d SNPs were excluded from the analysis due to nucleotide issues.' % (num_nt_issues))
