@@ -5,6 +5,7 @@ import scipy as sp
 import numpy as np
 import h5py
 import pylab
+import cPickle
 import logging
 from os import path
 
