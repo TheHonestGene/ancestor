@@ -149,7 +149,7 @@ def calc_indiv_genot_pcs(genotype_file, weight_dict,**kwargs):
 
 
 
-def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = ['EUR','AFR','EAS'], snps_filter=None):
+def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = ['EUR','AFR','EAS'], snps_filter=None, verbose=False):
     """
     Calculates:
         - The principal components for the given genotype dataset.
@@ -186,7 +186,8 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
     num_snps_used = 0
     log.info('Calculating PCs')
     for chrom in range(1, 23):
-        print 'Working on Chromosome %d' % chrom
+        if verbose:
+            print 'Working on Chromosome %d' % chrom
         log.info('Working on Chromosome %d' % chrom)
         chrom_str = 'chr%d' % chrom
 
@@ -199,21 +200,27 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
         sids = sids.compress(ok_snp_filter, axis=0)
 
         log.info('Loading SNPs')
-        print 'Loading SNPs'
-        snps = h5f[chrom_str]['calldata']['snps'][...]
-        print 'Filtering SNPs'
+        if verbose:
+            print 'Loading SNPs'
+#         snps = h5f[chrom_str]['calldata']['snps'][...]
+        snps = h5f[chrom_str]['calldata']['snps'][:100000]  #A debugging hack
+        if verbose:
+            print 'Filtering SNPs'
         snps = snps.compress(ok_snp_filter, axis=0)
-        print 'Using %d SNPs'%sp.sum(ok_snp_filter)
-        print 'Filtering individuals.'
+        if verbose:
+            print 'Using %d SNPs'%sp.sum(ok_snp_filter)
+            print 'Filtering individuals.'
         snps = snps[:,indiv_filter] #Filter individuals with certain ancestry for the analyses
-        print 'Using %d individuals'%sp.sum(indiv_filter)
+        if verbose:
+            print 'Using %d individuals'%sp.sum(indiv_filter)
         
         length = len(h5f[chrom_str]['variants/REF'])
         nts = np.hstack((h5f[chrom_str]['variants/REF'][:].reshape(length, 1),
                          h5f[chrom_str]['variants/ALT'][:].reshape(length, 1)))
         nts = nts.compress(ok_snp_filter, axis=0)
         log.info('Updating PCs')
-        print 'Calculating PC projections'
+        if verbose:
+            print 'Calculating PC projections'
         pcs_per_chr = _calc_pcs(pc_weights_dict, sids, nts, snps, num_pcs_to_use)
         pcs += pcs_per_chr['pcs']
         num_nt_issues += pcs_per_chr['num_nt_issues']
@@ -223,9 +230,9 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
     log.info('%d Calculating average PC values for each population.' % (num_nt_issues))
     avg_pcs_list= []
     num_indiv_list = []
-    num_continents_to_use = len(populations_to_use)
-    E = sp.empty(num_continents_to_use,num_continents_to_use,dtype='float32')  #The avg. pop. PCs matrix, used for admixture decomposition.
-    for i in range(num_continents_to_use):
+    num_pops_to_use = len(populations_to_use)
+    E = sp.empty((num_pops_to_use,num_pops_to_use),dtype='float32')  #The avg. pop. PCs matrix, used for admixture decomposition.
+    for i in range(num_pops_to_use):
         popul = populations_to_use[i]
         pop_filter = sp.in1d(filtered_populations, [popul])
         pop_num_indivs = sp.sum(pop_filter)
