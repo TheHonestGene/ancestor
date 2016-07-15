@@ -213,8 +213,8 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
 
     
     log.info('%d Calculating average PC values for each population.' % (num_nt_issues))
-    avg_pcs_dict= {}
-    num_indiv_dict = {}
+    avg_pcs_list= []
+    num_indiv_list = []
     num_continents_to_use = len(populations_to_use)
     E = sp.empty(num_continents_to_use,num_continents_to_use,dtype='float32')  #The avg. pop. PCs matrix, used for admixture decomposition.
     for i in range(num_continents_to_use):
@@ -222,12 +222,12 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
         pop_filter = sp.in1d(filtered_populations, [popul])
         pop_num_indivs = sp.sum(pop_filter)
         avg_pcs = sp.mean(pcs[pop_filter])
-        avg_pcs_dict[popul]=avg_pcs
-        num_indiv_dict[popul]=pop_num_indivs
+        avg_pcs_list.append(avg_pcs)
+        num_indiv_list.append(pop_num_indivs)
         E[i]=sp.concatenate((avg_pcs,[1.0]))
     
     #For decomposition of admixture, we assume that the same set of SNPs are used.
-    pop_dict = {'admix_decom_mat': E.I, 'populations':populations_to_use, 'avg_pcs':avg_pcs_dict, 'num_indivs':num_indiv_dict}  
+    pop_dict = {'admix_decom_mat': E.I, 'populations':populations_to_use, 'avg_pcs':sp.array(avg_pcs_list), 'num_indivs':num_indiv_list}  
     h5f.close()
     log.info('%d SNPs were excluded from the analysis due to nucleotide issues.' % (num_nt_issues))
     log.info('%d SNPs were used for the analysis.' % (num_snps_used))
@@ -237,7 +237,7 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
 
 def save_pcs_admixture_info(pcs, pop_dict, output_file):
     """
-    Saves the hapmap pcs in an HDF5 file
+    Saves the PCs and admixture information to a HDF5 file
     :param output_file: HDF5 file the pcs should be written to
     :param pcs: principal components
     :param pop_dict: dictionary with various populations information
@@ -248,13 +248,14 @@ def save_pcs_admixture_info(pcs, pop_dict, output_file):
     oh5f.create_dataset('pcs', data=pcs)
     pop_g = oh5f.create_group('populations')
     #FINSIH THIS
-    
-    for population, mask in populations.items():
-        pop_g.create_dataset(population, data=mask)
+    pop_g.create_dataset('admix_decom_mat', data=pop_dict['admix_decom_mat'])
+    pop_g.create_dataset('populations', data=pop_dict['populations'])
+    pop_g.create_dataset('avg_pcs', data=pop_dict['avg_pcs'])
+    pop_g.create_dataset('num_indivs', data=pop_dict['num_indivs'])
     oh5f.close()
 
 
-def load_pcs_from_file(input_file):
+def load_pcs_admixture_info(input_file):
     """
     Loads pcs from an HDF5 file
     :param input_file: HDF5 file that contains the pcs
