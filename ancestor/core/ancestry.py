@@ -314,8 +314,8 @@ def ancestry_analysis(genotype_file, weights_file, pcs_file, check_population='E
     :param check_population: The population/ancestry to check.
         
     """
-    weight_dict,stats = parse_pc_weights(weights_file)
-    genotype_d = calc_indiv_genot_pcs(genotype_file, weight_dict,**kwargs)
+    weight_dict, stats_dict = parse_pc_weights(weights_file)
+    genotype_d = calc_indiv_genot_pcs(genotype_file, weight_dict, num_pcs=stats_dict['num_pcs'], **kwargs)
     genotype_pcs = genotype_d['pcs']
 
     pcs_admixture_dict = load_pcs_admixture_info(pcs_file)
@@ -328,6 +328,7 @@ def ancestry_analysis(genotype_file, weights_file, pcs_file, check_population='E
     ancestry_dict['check_population'] = check_population
     ancestry_dict['admixture'] = admixture
     return ancestry_dict
+
 
 
 def check_in_population(pcs, pc1, pc2):
