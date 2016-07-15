@@ -319,7 +319,7 @@ def ancestry_analysis(genotype_file, weights_file, pcs_file, check_population='E
     pcs = pcs_admixture_dict['pcs']
     pop_dict = pcs_admixture_dict['pop_dict']
     print pop_dict['unique_populations']
-    genotype_d = calc_indiv_genot_pcs(genotype_file, weight_dict, len(pop_dict['unique_populations']), **kwargs)
+    genotype_d = calc_indiv_genot_pcs(genotype_file, weight_dict, len(pop_dict['unique_populations'])-1, **kwargs)
     genotype_pcs = genotype_d['pcs'][0]
 
     admixture = calc_admixture(genotype_pcs, pop_dict['admix_decom_mat'])
@@ -378,7 +378,7 @@ def _calc_pcs(weight_dict, sids, nts, snps, num_pcs_to_use):
     num_nt_issues = 0
     num_snps_used = 0
     num_indivs = snps.shape[1]
-    pcs = sp.zeros((num_indivs, 2))
+    pcs = sp.zeros((num_indivs, num_pcs_to_use))
 
     for snp_i, sid in enumerate(sids):
         try:
