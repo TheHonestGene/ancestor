@@ -251,7 +251,7 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
         avg_pcs_list.append(avg_pcs)
         num_indiv_list.append(pop_num_indivs)
         E[i]=sp.concatenate((avg_pcs,[1.0]))
-    print E
+    E = sp.transpose(E)
     #For decomposition of admixture, we assume that the same set of SNPs are used.
     pop_dict = {'admix_decom_mat': linalg.inv(E), 'populations': filtered_populations, 'unique_populations':populations_to_use, 
                 'avg_pcs':sp.array(avg_pcs_list), 'num_indivs':num_indiv_list}  
@@ -454,7 +454,7 @@ def _test_admixture_():
     #Generate and save PC/admixture info file for 1000 genomes.
     print 'Calculating PC projections and admixture decomposition information'
     pcs_dict = calc_genot_pcs(pc_ref_genot_file, sid_weights_map, stats_dict, populations_to_use = ['EUR','AFR','EAS'], 
-                              snps_filter=snps_filter, verbose=True, debug_cutoff=50000)
+                              snps_filter=snps_filter, verbose=True, debug_cutoff=100000)
     print 'Save projected PCs and admixture decomposition to file'
     save_pcs_admixture_info(pcs_dict['pcs'], pcs_dict['pop_dict'], ref_pcs_admix_file)
 
