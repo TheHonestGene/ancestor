@@ -383,6 +383,14 @@ def _calc_pcs(weight_dict, sids, nts, snps, num_pcs_to_use):
     return {'num_snps_used': num_snps_used, 'num_nt_issues': num_nt_issues, 'pcs': pcs}
 
 
+def get_snps_filter(nt_map_file):
+    nt_map = cPickle.load(open(nt_map_file,'r'))
+    snps_filter = {}
+    for chrom in range(1, 23):
+        chrom_str = 'chr%d' % chrom
+        snps_filter[chrom_str] = nt_map[chrom_str]['sids']
+    return snps_filter
+
 def calc_admixture(pred_pcs, admix_decomp_mat):    
     """
     Get admixture decomp.  Predicted PCs correspond to the admix_decomp_mat.
@@ -393,10 +401,14 @@ def calc_admixture(pred_pcs, admix_decomp_mat):
     return admixture
 
 
-
+#For debugging purposes
 def _test_admixture_():
     pc_weights_file = ''
     pc_weights_hdf5_file = ''
+    nt_map_file = '/faststorage/project/TheHonestGene/data_for_pipeline/NT_DATA/23andme_v4_nt_map.pickled'
+    pc_ref_genot_file = ''
+    indiv_genot_file = ''
+    ref_pcs_admix_file = ''
     
     #Parse and save weights file
     sid_weights_map, stats_dict = _parse_pc_weights_from_text(pc_weights_file)
@@ -404,8 +416,17 @@ def _test_admixture_():
     #_parse_pc_weights_from_hdf5(pc_weights_hdf5_file)
     
     #Generate a snps_filter based on an individual genotype??
+    snps_filter = get_snps_filter(nt_map_file)
     
     #Generate and save PC/admixture info file for 1000 genomes.
-    calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = ['EUR','AFR','EAS'], snps_filter=None)
-    
+    pcs_dict = calc_genot_pcs(pc_ref_genot_file, sid_weights_map, stats_dict, populations_to_use = ['EUR','AFR','EAS'], snps_filter=snps_filter)
+    save_pcs_admixture_info(pcs_dict['pcs'], pcs_dict['pop_dict'], ref_pcs_admix_file)
+
     # Calculate admixture for an individual
+    ancestry_results =  ancestry_analysis(indiv_genot_file, pc_weights_hdf5_file, ref_pcs_admix_file, check_population='EUR')
+    print ancestry_results
+    
+    #Plot PCs..
+    
+    
+    
