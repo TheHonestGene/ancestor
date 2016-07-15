@@ -403,12 +403,12 @@ def calc_admixture(pred_pcs, admix_decomp_mat):
 
 #For debugging purposes
 def _test_admixture_():
-    pc_weights_file = ''
-    pc_weights_hdf5_file = ''
+    pc_weights_file = '/faststorage/project/TheHonestGene/snpweights/snpwt.CEPH_whites'
+    pc_weights_hdf5_file = '/faststorage/project/TheHonestGene/snpweights/snpwt.CEPH_whites.hdf5'
     nt_map_file = '/faststorage/project/TheHonestGene/data_for_pipeline/NT_DATA/23andme_v4_nt_map.pickled'
-    pc_ref_genot_file = ''
-    indiv_genot_file = ''
-    ref_pcs_admix_file = ''
+    pc_ref_genot_file = '/faststorage/project/TheHonestGene/data_for_pipeline/1k_genomes_hg.hdf5'
+    indiv_genot_file = '/faststorage/project/TheHonestGene/prediction_data/23andme-genomes_imputed/3a9c0f27a91816e7.genome_imputed.hdf5'
+    ref_pcs_admix_file = '/faststorage/project/TheHonestGene/test_data/1kg_CEPH_pcs_admix_data.hdf5'
     
     #Parse and save weights file
     sid_weights_map, stats_dict = _parse_pc_weights_from_text(pc_weights_file)
@@ -427,6 +427,5 @@ def _test_admixture_():
     print ancestry_results
     
     #Plot PCs..
-    
     
     
