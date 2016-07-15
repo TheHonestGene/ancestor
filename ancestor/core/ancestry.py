@@ -252,7 +252,7 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
         num_indiv_list.append(pop_num_indivs)
         E[i]=sp.concatenate((avg_pcs,[1.0]))
 #     E = sp.transpose(E)
-    print E
+    print E 
     #For decomposition of admixture, we assume that the same set of SNPs are used.
     pop_dict = {'admix_decom_mat': linalg.inv(E), 'populations': filtered_populations, 'unique_populations':populations_to_use, 
                 'avg_pcs':sp.array(avg_pcs_list), 'num_indivs':num_indiv_list}  
