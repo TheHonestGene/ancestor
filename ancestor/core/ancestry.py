@@ -149,7 +149,7 @@ def calc_indiv_genot_pcs(genotype_file, weight_dict,**kwargs):
 
 
 
-def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = ['EUR','AFR','EAS'], snps_filter=None, verbose=False):
+def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = ['EUR','AFR','EAS'], snps_filter=None, verbose=False, debug_cutoff=100000):
     """
     Calculates:
         - The principal components for the given genotype dataset.
@@ -194,7 +194,8 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
         log.info('Identifying overlap')
         ok_snp_filter = sp.in1d(ok_sids, snps_filter[chrom_str])
         ok_chrom_sids = ok_sids.compress(ok_snp_filter, axis=0)
-        sids = h5f[chrom_str]['variants']['ID'][...]
+#         sids = h5f[chrom_str]['variants']['ID'][...]
+        sids = h5f[chrom_str]['variants']['ID'][:debug_cutoff]  #A debugging hack
         ok_snp_filter = sp.in1d(sids, ok_chrom_sids)
         #         assert sids[ok_snp_filter]==ok_sids, 'WTF?'
         sids = sids.compress(ok_snp_filter, axis=0)
@@ -203,7 +204,7 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
         if verbose:
             print 'Loading SNPs'
 #         snps = h5f[chrom_str]['calldata']['snps'][...]
-        snps = h5f[chrom_str]['calldata']['snps'][:100000]  #A debugging hack
+        snps = h5f[chrom_str]['calldata']['snps'][:debug_cutoff]  #A debugging hack
         if verbose:
             print 'Filtering SNPs'
         snps = snps.compress(ok_snp_filter, axis=0)
@@ -214,9 +215,12 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
         if verbose:
             print 'Using %d individuals'%sp.sum(indiv_filter)
         
-        length = len(h5f[chrom_str]['variants/REF'])
-        nts = np.hstack((h5f[chrom_str]['variants/REF'][:].reshape(length, 1),
-                         h5f[chrom_str]['variants/ALT'][:].reshape(length, 1)))
+#         length = len(h5f[chrom_str]['variants/REF'])
+        length == debug_cutoff
+#         nts = np.hstack((h5f[chrom_str]['variants/REF'][:].reshape(length, 1),
+#                          h5f[chrom_str]['variants/ALT'][:].reshape(length, 1)))
+        nts = np.hstack((h5f[chrom_str]['variants/REF'][:debug_cutoff].reshape(length, 1),
+                         h5f[chrom_str]['variants/ALT'][:debug_cutoff].reshape(length, 1)))
         nts = nts.compress(ok_snp_filter, axis=0)
         log.info('Updating PCs')
         if verbose:
