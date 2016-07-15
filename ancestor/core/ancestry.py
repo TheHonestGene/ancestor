@@ -431,10 +431,10 @@ def _test_admixture_():
     
     #Parse and save weights file
     print 'Parsing SNP weights from text file'
-    sid_weights_map, stats_dict = _parse_pc_weights_from_text(pc_weights_file)
-    print 'Storing SNP weights'
-    save_pc_weights(sid_weights_map, stats_dict, pc_weights_hdf5_file)
-#     sid_weights_map, stats_dict = _parse_pc_weights_from_hdf5(pc_weights_hdf5_file)
+#     sid_weights_map, stats_dict = _parse_pc_weights_from_text(pc_weights_file)
+#     print 'Storing SNP weights'
+#     save_pc_weights(sid_weights_map, stats_dict, pc_weights_hdf5_file)
+    sid_weights_map, stats_dict = _parse_pc_weights_from_hdf5(pc_weights_hdf5_file)
     
     #Generate a snps_filter based on an individual genotype??
     print 'Loading SNP filter'
