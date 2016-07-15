@@ -251,9 +251,9 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
         avg_pcs_list.append(avg_pcs)
         num_indiv_list.append(pop_num_indivs)
         E[i]=sp.concatenate((avg_pcs,[1.0]))
-    
+    print E
     #For decomposition of admixture, we assume that the same set of SNPs are used.
-    pop_dict = {'admix_decom_mat': linalg.pinv(E), 'populations': filtered_populations, 'unique_populations':populations_to_use, 
+    pop_dict = {'admix_decom_mat': linalg.inv(E), 'populations': filtered_populations, 'unique_populations':populations_to_use, 
                 'avg_pcs':sp.array(avg_pcs_list), 'num_indivs':num_indiv_list}  
     h5f.close()
     log.info('%d SNPs were excluded from the analysis due to nucleotide issues.' % (num_nt_issues))
@@ -316,15 +316,15 @@ def ancestry_analysis(genotype_file, weights_file, pcs_file, check_population='E
     """
     weight_dict, stats_dict = parse_pc_weights(weights_file)
     genotype_d = calc_indiv_genot_pcs(genotype_file, weight_dict, num_pcs=stats_dict['num_pcs'], **kwargs)
-    genotype_pcs = genotype_d['pcs']
+    genotype_pcs = genotype_d['pcs'][0]
 
     pcs_admixture_dict = load_pcs_admixture_info(pcs_file)
     pcs = pcs_admixture_dict['pcs']
     pop_dict = pcs_admixture_dict['pop_dict']
     admixture = calc_admixture(genotype_pcs, pop_dict['admix_decom_mat'])
     
-    pop_filter = sp.in1d(pop_dict['population'],[check_population])
-    ancestry_dict = check_in_population(pcs[pop_filter], genotype_pcs)
+    pop_filter = sp.in1d(pop_dict['populations'],[check_population])
+    check_population = check_in_population(pcs[pop_filter], genotype_pcs[0],genotype_pcs[1])
     ancestry_dict['check_population'] = check_population
     ancestry_dict['admixture'] = admixture
     return ancestry_dict
@@ -423,7 +423,9 @@ def calc_admixture(pred_pcs, admix_decomp_mat):
     Get admixture decomp.  Predicted PCs correspond to the admix_decomp_mat.
     """
     log.info('Decomposing individual admixture')
-    admixture = sp.dot(pred_pcs, admix_decomp_mat)
+
+    v=sp.concatenate((pred_pcs,[1.0]))
+    admixture = sp.dot(v, admix_decomp_mat)
     assert sp.sum(admixture)==1, "Admixture doesn't sum to 1: "+str(admixture)
     return admixture
 
