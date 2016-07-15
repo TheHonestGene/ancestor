@@ -433,7 +433,7 @@ def calc_admixture(pred_pcs, admix_decomp_mat):
 
 #For debugging purposes
 def _test_admixture_():
-    pc_weights_file = '/faststorage/project/TheHonestGene/snpweights/snpwt.CEPH_whites'
+    pc_weights_file = '/faststorage/project/TheHonestGene/snpweights/snpwt.CO'
     pc_weights_hdf5_file = '/faststorage/project/TheHonestGene/snpweights/snpwt.CO.hdf5'
     nt_map_file = '/faststorage/project/TheHonestGene/data_for_pipeline/NT_DATA/23andme_v4_nt_map.pickled'
     pc_ref_genot_file = '/faststorage/project/TheHonestGene/data_for_pipeline/1k_genomes_hg.hdf5'
@@ -442,10 +442,10 @@ def _test_admixture_():
     
     #Parse and save weights file
     print 'Parsing SNP weights from text file'
-#     sid_weights_map, stats_dict = _parse_pc_weights_from_text(pc_weights_file)
-#     print 'Storing SNP weights'
-#     save_pc_weights(sid_weights_map, stats_dict, pc_weights_hdf5_file)
-    sid_weights_map, stats_dict = _parse_pc_weights_from_hdf5(pc_weights_hdf5_file)
+    sid_weights_map, stats_dict = _parse_pc_weights_from_text(pc_weights_file)
+    print 'Storing SNP weights'
+    save_pc_weights(sid_weights_map, stats_dict, pc_weights_hdf5_file)
+#     sid_weights_map, stats_dict = _parse_pc_weights_from_hdf5(pc_weights_hdf5_file)
     
     #Generate a snps_filter based on an individual genotype??
     print 'Loading SNP filter'
