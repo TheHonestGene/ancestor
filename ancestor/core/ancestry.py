@@ -53,7 +53,7 @@ def _parse_pc_weights_from_hdf5(pc_weights_file):
     gh5f = h5py.File(pc_weights_file, 'r')
     weights = {}
     attrs = gh5f.attrs;
-    stats = {'linear_transform': attrs['linear_transform'].tolist(), 'shrinkage': attrs['shrinkage'].tolist()}
+    stats_dict = {'linear_transform': attrs['linear_transform'].tolist(), 'shrinkage': attrs['shrinkage'].tolist()}
     populations = {}
     for key, value in attrs.items():
         if key in ('linear_transform', 'shrinkage'):
@@ -65,16 +65,16 @@ def _parse_pc_weights_from_hdf5(pc_weights_file):
         if population not in populations:
             populations[population] = {}
         populations[population][key_s[1]] = value.tolist()
-    stats['populations'] = populations
+    stats_dict['populations'] = populations
     snpids = gh5f['snpid'][...]
     nts = gh5f['nts'][...]
     mean_g = gh5f['mean_g'][...]
     pc_ws = gh5f['pc_ws'][...]
-    stats['num_pcs'] = len(pc_ws[0]) 
+    stats_dict['num_pcs'] = len(pc_ws[0]) 
     for i, snpid in enumerate(snpids):
         weights[snpid] = {'pc_ws': pc_ws[i], 'mean_g': mean_g[i], 'nts': nts[i].tolist()}
     gh5f.close()
-    return weights, stats
+    return weights, stats_dict
 
 
 def save_pc_weights(weights, stats, output_file):
@@ -142,7 +142,7 @@ def calc_indiv_genot_pcs(genotype_file, weight_dict,**kwargs):
         
     gh5f.close()
     log.info('%d SNPs were excluded from the analysis due to nucleotide issues.' % (num_nt_issues))
-    log.info('Number of SNPs uesd for PC projection: %d' % num_snps_used)
+    log.info('Number of SNPs used for PC projection: %d' % num_snps_used)
     return {'pcs': pcs, 'num_snps_used': num_snps_used}
 
 
@@ -227,7 +227,8 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
         E[i]=sp.concatenate((avg_pcs,[1.0]))
     
     #For decomposition of admixture, we assume that the same set of SNPs are used.
-    pop_dict = {'admix_decom_mat': E.I, 'populations':populations_to_use, 'avg_pcs':sp.array(avg_pcs_list), 'num_indivs':num_indiv_list}  
+    pop_dict = {'admix_decom_mat': E.I, 'populations': filtered_populations, 'unique_populations':populations_to_use, 
+                'avg_pcs':sp.array(avg_pcs_list), 'num_indivs':num_indiv_list}  
     h5f.close()
     log.info('%d SNPs were excluded from the analysis due to nucleotide issues.' % (num_nt_issues))
     log.info('%d SNPs were used for the analysis.' % (num_snps_used))
@@ -246,12 +247,14 @@ def save_pcs_admixture_info(pcs, pop_dict, output_file):
     # Store coordinates
     oh5f = h5py.File(output_file, 'w')
     oh5f.create_dataset('pcs', data=pcs)
-    pop_g = oh5f.create_group('populations')
-    #FINSIH THIS
-    pop_g.create_dataset('admix_decom_mat', data=pop_dict['admix_decom_mat'])
-    pop_g.create_dataset('populations', data=pop_dict['populations'])
-    pop_g.create_dataset('avg_pcs', data=pop_dict['avg_pcs'])
-    pop_g.create_dataset('num_indivs', data=pop_dict['num_indivs'])
+    pop_g = oh5f.create_group('pop_group')
+    for label, mask in pop_dict.items():
+        pop_g.create_dataset(label, data=mask)
+#     pop_g.create_dataset('admix_decom_mat', data=pop_dict['admix_decom_mat'])
+#     pop_g.create_dataset('populations', data=pop_dict['populations'])
+#     pop_g.create_dataset('unique_populations', data=pop_dict['unique_populations'])
+#     pop_g.create_dataset('avg_pcs', data=pop_dict['avg_pcs'])
+#     pop_g.create_dataset('num_indivs', data=pop_dict['num_indivs'])
     oh5f.close()
 
 
@@ -263,31 +266,41 @@ def load_pcs_admixture_info(input_file):
     """
     log.info('Loading HapMap PCs from %s ' % input_file)
     ch5f = h5py.File(input_file)
-    pop_g = ch5f['populations']
-    populations = {}
+    pop_g = ch5f['pop_group']
+    pop_dict = {}
     for key in pop_g.keys():
-        populations[key] = pop_g[key][...]
+        pop_dict[key] = pop_g[key][...]
     pcs = ch5f['pcs'][...]
     ch5f.close()
-    return {'populations': populations,
-            'pcs': pcs}
+    return {'pop_dict': pop_dict, 'pcs': pcs}
 
 
-def ancestry_analysis(genotype_file,weights_file,pcs_file,check_population='EUR',**kwargs):
+def ancestry_analysis(genotype_file, weights_file, pcs_file, check_population='EUR', **kwargs):
     """
-    Returns if 
+    Runs the ancestry analysis on a single genome.  It consists of three steps:
+        1. Estimate the PC values for the individual.
+        2. Estimate the population admixture proportion of the individual.
+        3. Check if he is of the given ancestry, using only the top two PCs.
+        
+    :param genotype_file: The genotype file with the individual genotype.
+    :param weights_file: The weights_file file with the PC SNP weights.
+    :param pcs_file: The file with PCs and admixture information for reference genotypes (e.g. 1000 genomes).
+    :param check_population: The population/ancestry to check.
+        
     """
     weight_dict,stats = parse_pc_weights(weights_file)
-    hapmap_pcs_dict = load_pcs_from_file(pcs_file)
-    genotype_pcs = calc_genotype_pcs(genotype_file, weight_dict,**kwargs)
-    pcs = hapmap_pcs_dict['pcs']
-    populations = hapmap_pcs_dict['populations']
+    genotype_d = calc_indiv_genot_pcs(genotype_file, weight_dict,**kwargs)
+    genotype_pcs = genotype_d['pcs']
+
+    pcs_admixture_dict = load_pcs_admixture_info(pcs_file)
+    pcs = pcs_admixture_dict['pcs']
+    pop_dict = pcs_admixture_dict['pop_dict']
+    admixture = calc_admixture(genotype_pcs, pop_dict['admix_decom_mat'])
     
-    filter = populations[check_population]
-    pcs = genotype_pcs['pc1']
-    pc2 = genotype_pcs['pc2']
-    ancestry_dict = check_in_population(pcs[filter], pc1, pc2)
-    ancestry_dict['population'] = check_population
+    pop_filter = sp.in1d(pop_dict['population'],[check_population])
+    ancestry_dict = check_in_population(pcs[pop_filter], genotype_pcs)
+    ancestry_dict['check_population'] = check_population
+    ancestry_dict['admixture'] = admixture
     return ancestry_dict
 
 
@@ -370,10 +383,29 @@ def _calc_pcs(weight_dict, sids, nts, snps, num_pcs_to_use):
     return {'num_snps_used': num_snps_used, 'num_nt_issues': num_nt_issues, 'pcs': pcs}
 
 
-def calc_admixture(pred_pcs, admix_decom_mat):    
+def calc_admixture(pred_pcs, admix_decomp_mat):    
     """
     Get admixture decomp.  Predicted PCs correspond to the admix_decomp_mat.
     """
+    log.info('Decomposing individual admixture')
     admixture = sp.dot(pred_pcs, admix_decomp_mat)
     assert sp.sum(admixture)==1, "Admixture doesn't sum to 1: "+str(admixture)
     return admixture
+
+
+
+def _test_admixture_():
+    pc_weights_file = ''
+    pc_weights_hdf5_file = ''
+    
+    #Parse and save weights file
+    sid_weights_map, stats_dict = _parse_pc_weights_from_text(pc_weights_file)
+    save_pc_weights(sid_weights_map, stats_dict, pc_weights_hdf5_file)
+    #_parse_pc_weights_from_hdf5(pc_weights_hdf5_file)
+    
+    #Generate a snps_filter based on an individual genotype??
+    
+    #Generate and save PC/admixture info file for 1000 genomes.
+    calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = ['EUR','AFR','EAS'], snps_filter=None)
+    
+    # Calculate admixture for an individual
