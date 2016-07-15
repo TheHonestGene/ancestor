@@ -186,6 +186,7 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
     num_snps_used = 0
     log.info('Calculating PCs')
     for chrom in range(1, 23):
+        print 'Working on Chromosome %d' % chrom
         log.info('Working on Chromosome %d' % chrom)
         chrom_str = 'chr%d' % chrom
 
@@ -412,18 +413,24 @@ def _test_admixture_():
     ref_pcs_admix_file = '/faststorage/project/TheHonestGene/test_data/1kg_CEPH_pcs_admix_data.hdf5'
     
     #Parse and save weights file
+    print 'Parsing SNP weights from text file'
     sid_weights_map, stats_dict = _parse_pc_weights_from_text(pc_weights_file)
+    print 'Storing SNP weights'
     save_pc_weights(sid_weights_map, stats_dict, pc_weights_hdf5_file)
-    #_parse_pc_weights_from_hdf5(pc_weights_hdf5_file)
+#     sid_weights_map, stats_dict = _parse_pc_weights_from_hdf5(pc_weights_hdf5_file)
     
     #Generate a snps_filter based on an individual genotype??
+    print 'Loading SNP filter'
     snps_filter = get_snps_filter(nt_map_file)
     
     #Generate and save PC/admixture info file for 1000 genomes.
+    print 'Calculating PC projections and admixture decomposition information'
     pcs_dict = calc_genot_pcs(pc_ref_genot_file, sid_weights_map, stats_dict, populations_to_use = ['EUR','AFR','EAS'], snps_filter=snps_filter)
+    print 'Save projected PCs and admixture decomposition to file'
     save_pcs_admixture_info(pcs_dict['pcs'], pcs_dict['pop_dict'], ref_pcs_admix_file)
 
     # Calculate admixture for an individual
+    print 'Calculate admixture for an individual.'
     ancestry_results =  ancestry_analysis(indiv_genot_file, pc_weights_hdf5_file, ref_pcs_admix_file, check_population='EUR')
     print ancestry_results
     
