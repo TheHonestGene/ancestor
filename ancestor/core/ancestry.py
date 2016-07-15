@@ -246,7 +246,7 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
         popul = populations_to_use[i]
         pop_filter = sp.in1d(filtered_populations, [popul])
         pop_num_indivs = sp.sum(pop_filter)
-        avg_pcs = sp.mean(pcs[pop_filter])
+        avg_pcs = sp.mean(pcs[pop_filter],0)
         avg_pcs_list.append(avg_pcs)
         num_indiv_list.append(pop_num_indivs)
         E[i]=sp.concatenate((avg_pcs,[1.0]))
