@@ -456,7 +456,7 @@ def _test_admixture_():
 
     # Calculate admixture for an individual
     print 'Calculate admixture for an individual.'
-    ancestry_results =  ancestry_analysis(indiv_genot_file, pc_weights_hdf5_file, ref_pcs_admix_file, num_pcs_to_uses=2, check_population='EUR')
+    ancestry_results =  ancestry_analysis(indiv_genot_file, pc_weights_hdf5_file, ref_pcs_admix_file, check_population='EUR')
     print ancestry_results
     
     #Plot PCs..
