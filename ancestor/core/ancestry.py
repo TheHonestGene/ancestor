@@ -180,7 +180,7 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
     filtered_populations = populations[indiv_filter]
     num_indivs = sp.sum(indiv_filter)
     log.info('Found genotypes for %d individuals' % num_indivs)
-    num_pcs_to_use=len(populations)-1
+    num_pcs_to_use=len(populations_to_use)-1
     pcs = sp.zeros((num_indivs, num_pcs_to_use))
     num_nt_issues = 0
     num_snps_used = 0
@@ -199,15 +199,21 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
         sids = sids.compress(ok_snp_filter, axis=0)
 
         log.info('Loading SNPs')
+        print 'Loading SNPs'
         snps = h5f[chrom_str]['calldata']['snps'][...]
-        snps = snps[:,indiv_filter] #Filter individuals with certain ancestry for the analyses
-        
+        print 'Filtering SNPs'
         snps = snps.compress(ok_snp_filter, axis=0)
+        print 'Using %d SNPs'%sp.sum(ok_snp_filter)
+        print 'Filtering individuals.'
+        snps = snps[:,indiv_filter] #Filter individuals with certain ancestry for the analyses
+        print 'Using %d individuals'%sp.sum(indiv_filter)
+        
         length = len(h5f[chrom_str]['variants/REF'])
         nts = np.hstack((h5f[chrom_str]['variants/REF'][:].reshape(length, 1),
                          h5f[chrom_str]['variants/ALT'][:].reshape(length, 1)))
         nts = nts.compress(ok_snp_filter, axis=0)
         log.info('Updating PCs')
+        print 'Calculating PC projections'
         pcs_per_chr = _calc_pcs(pc_weights_dict, sids, nts, snps, num_pcs_to_use)
         pcs += pcs_per_chr['pcs']
         num_nt_issues += pcs_per_chr['num_nt_issues']
