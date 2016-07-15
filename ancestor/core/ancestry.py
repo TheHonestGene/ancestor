@@ -164,7 +164,7 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
     :return: dictionary with pcs and number of snps that were used
     
     """
-    assert len(populations_to_use)<=pc_stats['num_pcs']-1, 'There are not sufficiently many PCs to separate the populations.'
+    assert len(populations_to_use)<=pc_stats['num_pcs']+1, 'There are not sufficiently many PCs to separate the populations.'
     
     log.info('Calculating Principal components for genotype file %s' % genot_file)
     ok_sids = np.asarray(list(pc_weights_dict.keys()))
