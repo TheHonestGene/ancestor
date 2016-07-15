@@ -32,7 +32,7 @@ def _parse_pc_weights_from_text(pc_weights_file):
         l = f.readline().split()
         num_pops = len(populations)
         for i in range(0, len(l), num_pops):
-            populations[l[i]]['meanpc'] = list(map(float, l[i+1:i+num_pops+1]))
+            populations[l[i]]['meanpc'] = list(map(float, l[i+1:i+num_pops]))
         linear_transform = list(map(float, f.readline().split()))
         for line in f:
             l = line.split()
