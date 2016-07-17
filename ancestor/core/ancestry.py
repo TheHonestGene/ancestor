@@ -150,7 +150,8 @@ def calc_indiv_genot_pcs(genotype_file, weight_dict, num_pcs_to_uses,**kwargs):
 
 
 
-def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = ['EUR','AFR','EAS'], snps_filter=None, verbose=False, debug_cutoff=None):
+def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = ['EUR','AFR','EAS'], snps_filter=None, 
+                   verbose=False, debug_cutoff=None):
     """
     Calculates:
         - The principal components for the given genotype dataset.
