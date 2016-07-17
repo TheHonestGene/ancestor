@@ -302,7 +302,8 @@ def load_pcs_admixture_info(input_file):
     return {'pop_dict': pop_dict, 'pcs': pcs}
 
 
-def ancestry_analysis(genotype_file, weights_file, pcs_file, check_population='EUR', **kwargs):
+def ancestry_analysis(genotype_file, weights_file, pcs_file, check_population='EUR', 
+                      verbose=False, debug_cutoff=None, **kwargs):
     """
     Runs the ancestry analysis on a single genome.  It consists of three steps:
         1. Estimate the PC values for the individual.
@@ -327,8 +328,8 @@ def ancestry_analysis(genotype_file, weights_file, pcs_file, check_population='E
     
     pop_filter = sp.in1d(pop_dict['populations'],[check_population])
     check_population = check_in_population(pcs[pop_filter], genotype_pcs[0],genotype_pcs[1])
-    ancestry_dict['check_population'] = check_population
-    ancestry_dict['admixture'] = admixture
+    ancestry_dict={}
+    ancestry_dict = {'check_population': check_population, 'admixture': admixture}
     return ancestry_dict
 
 
@@ -455,13 +456,13 @@ def _test_admixture_():
     #Generate and save PC/admixture info file for 1000 genomes.
     print 'Calculating PC projections and admixture decomposition information'
     pcs_dict = calc_genot_pcs(pc_ref_genot_file, sid_weights_map, stats_dict, populations_to_use = ['EUR','AFR','EAS'], 
-                              snps_filter=snps_filter, verbose=True, debug_cutoff=100000)
+                              snps_filter=snps_filter, verbose=True)
     print 'Save projected PCs and admixture decomposition to file'
     save_pcs_admixture_info(pcs_dict['pcs'], pcs_dict['pop_dict'], ref_pcs_admix_file)
 
     # Calculate admixture for an individual
     print 'Calculate admixture for an individual.'
-    ancestry_results =  ancestry_analysis(indiv_genot_file, pc_weights_hdf5_file, ref_pcs_admix_file, check_population='EUR')
+    ancestry_results =  ancestry_analysis(indiv_genot_file, pc_weights_hdf5_file, ref_pcs_admix_file, check_population='EUR',)
     print ancestry_results
     
     #Plot PCs..
