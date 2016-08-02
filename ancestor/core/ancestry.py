@@ -151,7 +151,7 @@ def calc_indiv_genot_pcs(genotype_file, weight_dict, num_pcs_to_uses,**kwargs):
 
 
 def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = ['EUR','AFR','EAS'], snps_filter=None, 
-                   verbose=False, debug_cutoff=None):
+                   verbose=False):
     """
     Calculates:
         - The principal components for the given genotype dataset.
@@ -196,10 +196,7 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
         log.info('Identifying overlap')
         ok_snp_filter = sp.in1d(ok_sids, snps_filter[chrom_str])
         ok_chrom_sids = ok_sids.compress(ok_snp_filter, axis=0)
-        if debug_cutoff is None:
-            sids = h5f[chrom_str]['variants']['ID'][...]
-        else:
-            sids = h5f[chrom_str]['variants']['ID'][:debug_cutoff]  #A debugging hack
+        sids = h5f[chrom_str]['variants']['ID'][...]
         ok_snp_filter = sp.in1d(sids, ok_chrom_sids)
         #         assert sids[ok_snp_filter]==ok_sids, 'WTF?'
         sids = sids.compress(ok_snp_filter, axis=0)
@@ -207,10 +204,7 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
         log.info('Loading SNPs')
         if verbose:
             print 'Loading SNPs'
-        if debug_cutoff is None:
-            snps = h5f[chrom_str]['calldata']['snps'][...]
-        else:
-            snps = h5f[chrom_str]['calldata']['snps'][:debug_cutoff]  #A debugging hack
+        snps = h5f[chrom_str]['calldata']['snps'][...]
         if verbose:
             print 'Filtering SNPs'
         snps = snps.compress(ok_snp_filter, axis=0)
@@ -221,15 +215,9 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
         if verbose:
             print 'Using %d individuals'%sp.sum(indiv_filter)
         
-        if debug_cutoff is None:
-            length = len(h5f[chrom_str]['variants/REF'])
-            nts = np.hstack((h5f[chrom_str]['variants/REF'][:].reshape(length, 1),
-                             h5f[chrom_str]['variants/ALT'][:].reshape(length, 1)))
-        else:
-            length = debug_cutoff
-            nts = np.hstack((h5f[chrom_str]['variants/REF'][:debug_cutoff].reshape(length, 1),
-                             h5f[chrom_str]['variants/ALT'][:debug_cutoff].reshape(length, 1)))
-            nts = nts.compress(ok_snp_filter, axis=0)
+        length = len(h5f[chrom_str]['variants/REF'])
+        nts = np.hstack((h5f[chrom_str]['variants/REF'][:].reshape(length, 1),
+                         h5f[chrom_str]['variants/ALT'][:].reshape(length, 1)))
         log.info('Updating PCs')
         if verbose:
             print 'Calculating PC projections'
@@ -307,7 +295,7 @@ def load_pcs_admixture_info(input_file):
 
 
 def ancestry_analysis(genotype_file, weights_file, pcs_file, check_population='EUR', 
-                      verbose=False, debug_cutoff=None, **kwargs):
+                      verbose=False, **kwargs):
     """
     Runs the ancestry analysis on a single genome.  It consists of three steps:
         1. Estimate the PC values for the individual.
@@ -332,7 +320,6 @@ def ancestry_analysis(genotype_file, weights_file, pcs_file, check_population='E
     
     pop_filter = sp.in1d(pop_dict['populations'],[check_population])
     check_population = check_in_population(pcs[pop_filter], genotype_pcs[0],genotype_pcs[1])
-    ancestry_dict={}
     ancestry_dict = {'check_population': check_population, 'admixture': admixture}
     return ancestry_dict
 
