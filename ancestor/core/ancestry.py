@@ -430,17 +430,17 @@ def calc_admixture(pred_pcs, admix_decomp_mat):
 
     v=sp.concatenate((pred_pcs,[1.0]))
     admixture = sp.dot(v, admix_decomp_mat)
-    assert sp.sum(admixture)==1, "Admixture doesn't sum to 1: "+str(admixture)
+    #assert sp.sum(admixture)==1, "Admixture doesn't sum to 1: "+str(admixture)
     return admixture
 
 
 #For debugging purposes
-def _test_admixture_():
+def _test_admixture_(indiv_genot_file = '2cc3830e0781569e.genome_imputed.hdf5'):
+    indiv_genot_file = '/faststorage/project/TheHonestGene/prediction_data/23andme-genomes_imputed/'+indiv_genot_file
     pc_weights_file = '/faststorage/project/TheHonestGene/snpweights/snpwt.CO'
     pc_weights_hdf5_file = '/faststorage/project/TheHonestGene/snpweights/snpwt.CO.hdf5'
     nt_map_file = '/faststorage/project/TheHonestGene/data_for_pipeline/NT_DATA/23andme_v4_nt_map.pickled'
     pc_ref_genot_file = '/faststorage/project/TheHonestGene/data_for_pipeline/1k_genomes_hg.hdf5'
-    indiv_genot_file = '/faststorage/project/TheHonestGene/prediction_data/23andme-genomes_imputed/3a9c0f27a91816e7.genome_imputed.hdf5'
     ref_pcs_admix_file = '/faststorage/project/TheHonestGene/test_data/1kg_CO_pcs_admix_data.hdf5'
     pcs_plot_file = '/faststorage/project/TheHonestGene/test_data/pc_plot.png'
     
