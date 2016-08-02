@@ -361,7 +361,7 @@ def plot_pcs(plot_file, pcs, populations, indiv_pcs=None):
     # Plot them
     unique_pops = sp.unique(populations)
     for pop in unique_pops:
-        pop_filter = sp.in1d(population, [pop])
+        pop_filter = sp.in1d(populations, [pop])
         pylab.plot(pcs[pop_filter][0], pcs[pop_filter][1], label=pop, ls='', marker='.', alpha=0.6)
 
     log.info('Plotting genome on plot')
