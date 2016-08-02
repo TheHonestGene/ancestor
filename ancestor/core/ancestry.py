@@ -344,7 +344,7 @@ def check_in_population(pcs, pc1, pc2):
     # Report ancestry.
     pop_mean = sp.mean(pcs, 0)
     pop_std = sp.std(pcs, 0)
-    pop_lim = (3 * pop_std) ** 2
+    pop_lim = (3 * pop_std[:2]) ** 2
     ind_pcs = sp.array([pc1, pc2])
     ind_lim = (ind_pcs - pop_mean[:2]) ** 2
     is_in_population = sp.any(ind_lim ** 2 < pop_lim)
