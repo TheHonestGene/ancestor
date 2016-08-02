@@ -127,7 +127,7 @@ def calc_indiv_genot_pcs(genotype_file, weight_dict, num_pcs_to_uses,**kwargs):
     num_nt_issues = 0
     num_snps_used = 0
     log.info('Calculating Principal Components for genotype file %s' % genotype_file)
-    pcs = sp.zeros((1, 2))
+    pcs = sp.zeros((1, num_pcs_to_uses))
     for chrom in range(1, 23):
         log_extra['progress']+=partial_progress_inc
         log.info('Working on Chromosome %d' % chrom,extra=log_extra)
