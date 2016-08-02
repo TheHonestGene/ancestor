@@ -354,7 +354,7 @@ def check_in_population(pcs, pc1, pc2):
             'is_in_population': is_in_population,'pc1':pc1,'pc2':pc2}
 
 
-def plot_pcs(plot_file, pcs, populations, genotype_pcs_dict=None):
+def plot_pcs(plot_file, pcs, populations, indiv_pcs=None):
     """
     Plots the PCs of the hapmap and if provided of the genotype
     :param populations: dictionary with different population masks for coloring the individuals
@@ -364,13 +364,15 @@ def plot_pcs(plot_file, pcs, populations, genotype_pcs_dict=None):
     """
     log.info('Plotting PCs of Hapmap')
     # Plot them
-    for population, mask in populations.items():
-        pylab.plot(pcs[mask][:, 0], pcs[mask][:, 1], label=population, ls='', marker='.', alpha=0.6)
+    unique_pops = sp.unique(populations)
+    for pop in unique_pops:
+        pop_filter = sp.in1d(population, [pop])
+        pylab.plot(pcs[pop_filter][0], pcs[pop_filter][1], label=pop, ls='', marker='.', alpha=0.6)
 
     log.info('Plotting genome on plot')
     # Project genome on to plot.
-    if genotype_pcs_dict is not None:
-        pylab.plot(genotype_pcs_dict['pc1'], genotype_pcs_dict['pc2'], 'o', label='This is you')
+    if indiv_pcs is not None:
+        pylab.plot(indiv_pcs[0], indiv_pcs[1], 'o', label='This is you')
     pylab.xlabel('PC 1')
     pylab.ylabel('PC 2')
     pylab.legend(loc=4, numpoints=1)
@@ -442,6 +444,7 @@ def _test_admixture_():
     pc_ref_genot_file = '/faststorage/project/TheHonestGene/data_for_pipeline/1k_genomes_hg.hdf5'
     indiv_genot_file = '/faststorage/project/TheHonestGene/prediction_data/23andme-genomes_imputed/3a9c0f27a91816e7.genome_imputed.hdf5'
     ref_pcs_admix_file = '/faststorage/project/TheHonestGene/test_data/1kg_CEPH_pcs_admix_data.hdf5'
+    pcs_plot_file = '/faststorage/project/TheHonestGene/test_data/pc_plot.png'
     
     #Parse and save weights file
     print 'Parsing SNP weights from text file'
@@ -460,6 +463,9 @@ def _test_admixture_():
                               snps_filter=snps_filter, verbose=True)
     print 'Save projected PCs and admixture decomposition to file'
     save_pcs_admixture_info(pcs_dict['pcs'], pcs_dict['pop_dict'], ref_pcs_admix_file)
+
+    print "Plot PC projection for the genotypes (for debugging purposes)."
+    plot_pcs(pcs_plot_file, pcs_dict['pcs'], pcs_dict['pop_dict']['populations'])
 
     # Calculate admixture for an individual
     print 'Calculate admixture for an individual.'
