@@ -205,9 +205,16 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
         if verbose:
             print 'Loading SNPs'
         snps = h5f[chrom_str]['calldata']['snps'][...]
+        nts = np.hstack((h5f[chrom_str]['variants/REF'][:].reshape(length, 1),
+                         h5f[chrom_str]['variants/ALT'][:].reshape(length, 1)))
+        
         if verbose:
             print 'Filtering SNPs'
         snps = snps.compress(ok_snp_filter, axis=0)
+        nts = nts.compress(ok_snp_filter, axis=0)
+        
+        assert len(nts)==len(snps), 'Somethings wrong.'
+        
         if verbose:
             print 'Using %d SNPs'%sp.sum(ok_snp_filter)
             print 'Filtering individuals.'
@@ -216,8 +223,6 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
             print 'Using %d individuals'%sp.sum(indiv_filter)
         
         length = len(h5f[chrom_str]['variants/REF'])
-        nts = np.hstack((h5f[chrom_str]['variants/REF'][:].reshape(length, 1),
-                         h5f[chrom_str]['variants/ALT'][:].reshape(length, 1)))
         log.info('Updating PCs')
         if verbose:
             print 'Calculating PC projections'
