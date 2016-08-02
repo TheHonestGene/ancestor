@@ -1,6 +1,9 @@
 """
 core functions to calculate ancestry
 """
+import matplotlib
+matplotlib.use('Agg')
+
 import scipy as sp
 from scipy import linalg
 import numpy as np
