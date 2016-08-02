@@ -235,6 +235,9 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
             print 'Calculating PC projections'
         pcs_per_chr = _calc_pcs(pc_weights_dict, sids, nts, snps, num_pcs_to_use)
         pcs += pcs_per_chr['pcs']
+        if verbose:
+            print 'Encountered %d nucleotide issues.'%pcs_per_chr['num_nt_issues']
+            print 'Used %d SNPs for projection.'%pcs_per_chr['num_snps_used']
         num_nt_issues += pcs_per_chr['num_nt_issues']
         num_snps_used += pcs_per_chr['num_snps_used']
 
@@ -412,7 +415,7 @@ def _calc_pcs(weight_dict, sids, nts, snps, num_pcs_to_use):
         # Project on the PCs
         pcs += sp.dot(norm_snp, pc_weights)
         num_snps_used += 1
-
+        
     return {'num_snps_used': num_snps_used, 'num_nt_issues': num_nt_issues, 'pcs': pcs}
 
 
@@ -443,7 +446,7 @@ def _test_admixture_():
     nt_map_file = '/faststorage/project/TheHonestGene/data_for_pipeline/NT_DATA/23andme_v4_nt_map.pickled'
     pc_ref_genot_file = '/faststorage/project/TheHonestGene/data_for_pipeline/1k_genomes_hg.hdf5'
     indiv_genot_file = '/faststorage/project/TheHonestGene/prediction_data/23andme-genomes_imputed/3a9c0f27a91816e7.genome_imputed.hdf5'
-    ref_pcs_admix_file = '/faststorage/project/TheHonestGene/test_data/1kg_CEPH_pcs_admix_data.hdf5'
+    ref_pcs_admix_file = '/faststorage/project/TheHonestGene/test_data/1kg_CO_pcs_admix_data.hdf5'
     pcs_plot_file = '/faststorage/project/TheHonestGene/test_data/pc_plot.png'
     
     #Parse and save weights file
