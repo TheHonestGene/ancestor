@@ -431,7 +431,7 @@ def calc_admixture(pred_pcs, admix_decomp_mat):
     v=sp.concatenate((pred_pcs,[1.0]))
     admixture = sp.dot(v, admix_decomp_mat)
     assert 0.99<sp.sum(admixture)<1.01, "Admixture doesn't sum to 1: "+str(admixture)
-    admixture[admixture<0]==0
+    admixture[admixture<0]=0
     admixture = admixture/sp.sum(admixture)
     return admixture
 
