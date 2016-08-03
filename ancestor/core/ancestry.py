@@ -446,7 +446,7 @@ def calc_admixture(pred_pcs, admix_decomp_mat):
         confidence = 'Mediocre'
     elif confidence_score<1:
         confidence = 'Poor'
-    elif:
+    else:
         confidence='None'
     return {'admixture':admixture, 'unadjusted_admixture':raw_admixture, 'confidence':confidence, 'confidence_score':confidence_score}
 
