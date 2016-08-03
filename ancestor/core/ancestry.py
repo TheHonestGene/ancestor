@@ -438,14 +438,16 @@ def calc_admixture(pred_pcs, admix_decomp_mat):
     admixture[admixture<0]=0
     admixture = admixture/sp.sum(admixture)
     confidence_score = sp.sum((admixture-raw_admixture)**2)/len(admixture)
-    if confidence_score<0.0001: 
+    if confidence_score<0.001: 
         confidence = 'Very good'
-    elif confidence_score<0.001:
-        confidence = 'Good'
     elif confidence_score<0.01:
+        confidence = 'Good'
+    elif confidence_score<0.1:
         confidence = 'Mediocre'
-    else:
+    elif confidence_score<1:
         confidence = 'Poor'
+    elif:
+        confidence='None'
     return {'admixture':admixture, 'unadjusted_admixture':raw_admixture, 'confidence':confidence, 'confidence_score':confidence_score}
 
 
