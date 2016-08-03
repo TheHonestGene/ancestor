@@ -177,8 +177,8 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
     log.info('Loading genotypes')
     h5f = h5py.File(genot_file, 'r')
 
-#     populations = h5f['indivs']['populations'][...]
-    populations = h5f['indivs']['continent'][...]  #Currently this is using continents, but we can/should switch to populations.  
+    populations = h5f['indivs']['populations'][...]
+#     populations = h5f['indivs']['continent'][...]  #Currently this is using continents, but we can/should switch to populations.  
     #We should also consider to allow us to combine multiple populations in one group, or something like that. 
     
     indiv_filter = sp.in1d(populations, populations_to_use)
@@ -365,7 +365,9 @@ def plot_pcs(plot_file, pcs, populations, indiv_pcs=None):
     unique_pops = sp.unique(populations)
     for pop in unique_pops:
         pop_filter = sp.in1d(populations, [pop])
-        pylab.plot(pcs[pop_filter][0], pcs[pop_filter][1], label=pop, ls='', marker='.', alpha=0.6)
+        pop_pcs = pcs[pop_filter]
+        print pop_pcs.shape
+        pylab.plot(pop_pcs[:,0], pop_pcs[:,1], label=pop, ls='', marker='.', alpha=0.6)
 
     log.info('Plotting genome on plot')
     # Project genome on to plot.
