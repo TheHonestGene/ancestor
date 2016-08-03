@@ -328,7 +328,7 @@ def ancestry_analysis(genotype_file, weights_file, pcs_file, check_population='E
     
     pop_filter = sp.in1d(pop_dict['populations'],[check_population])
     check_population = check_in_population(pcs[pop_filter], genotype_pcs[0],genotype_pcs[1])
-    ancestry_dict = {'check_population': check_population, 'admixture': admixture}
+    ancestry_dict = {'check_population': check_population, 'admixture': admixture, 'indiv_pcs':genotype_pcs}
     return ancestry_dict
 
 
@@ -433,9 +433,19 @@ def calc_admixture(pred_pcs, admix_decomp_mat):
     v=sp.concatenate((pred_pcs,[1.0]))
     admixture = sp.dot(v, admix_decomp_mat)
     assert 0.99<sp.sum(admixture)<1.01, "Admixture doesn't sum to 1: "+str(admixture)
+    raw_admixture = sp.copy(admixture)
     admixture[admixture<0]=0
     admixture = admixture/sp.sum(admixture)
-    return admixture
+    confidence_score = (admixture-raw_admixture)**2/len(admixture)
+    if confidence_score<0.0001: 
+        confidence = 'Very good'
+    elif confidence_score<0.001:
+        confidence = 'Good'
+    elif confidence_score<0.01:
+        confidence = 'Mediocre'
+    else:
+        confidence = 'Poor'
+    return {'admixture':admixture, 'unadjusted_admixture':raw_admixture, 'confidence':confidence, 'confidence_score':confidence_score}
 
 
 #For debugging purposes
@@ -469,14 +479,16 @@ def _test_admixture_(indiv_genot_file = '2cc3830e0781569e.genome_imputed.hdf5'):
     print 'Loading pre-calculated projected PCs and admixture decomposition to file'
     pcs_dict = load_pcs_admixture_info(ref_pcs_admix_file)
     
-    print "Plot PC projection for the genotypes (for debugging purposes)."
-    plot_pcs(pcs_plot_file, pcs_dict['pcs'], pcs_dict['pop_dict']['populations'])
 
     # Calculate admixture for an individual
     print 'Calculate admixture for an individual.'
     ancestry_results =  ancestry_analysis(indiv_genot_file, pc_weights_hdf5_file, ref_pcs_admix_file, check_population='EUR',)
-    print ancestry_results
+    print ancestry_results['admixture']
+    
     
     #Plot PCs..
+    print "Plot PC projection for the genotypes."
+    plot_pcs(pcs_plot_file, pcs_dict['pcs'], pcs_dict['pop_dict']['populations'], indiv_pcs=ancestry_results['indiv_pcs'])
+    
     
     
