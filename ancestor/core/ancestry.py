@@ -362,6 +362,7 @@ def plot_pcs(plot_file, pcs, populations, indiv_pcs=None):
     """
     log.info('Plotting PCs of Hapmap')
     # Plot them
+    pylab.clf()
     unique_pops = sp.unique(populations)
     for pop in unique_pops:
         pop_filter = sp.in1d(populations, [pop])
