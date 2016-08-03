@@ -153,7 +153,7 @@ def calc_indiv_genot_pcs(genotype_file, weight_dict, num_pcs_to_uses,**kwargs):
 
 
 
-def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = ['EUR','AFR','EAS'], snps_filter=None, 
+def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = ['TSI','FIN','IBS', 'GBR'], snps_filter=None, 
                    verbose=False):
     """
     Calculates:
@@ -453,18 +453,18 @@ def _test_admixture_(indiv_genot_file = '2cc3830e0781569e.genome_imputed.hdf5'):
 #     sid_weights_map, stats_dict = _parse_pc_weights_from_text(pc_weights_file)
 #     print 'Storing SNP weights'
 #     save_pc_weights(sid_weights_map, stats_dict, pc_weights_hdf5_file)
-# #     sid_weights_map, stats_dict = _parse_pc_weights_from_hdf5(pc_weights_hdf5_file)
-#      
-#     #Generate a snps_filter based on an individual genotype??
-#     print 'Loading SNP filter'
-#     snps_filter = get_snps_filter(nt_map_file)
-#      
-#     #Generate and save PC/admixture info file for 1000 genomes.
-#     print 'Calculating PC projections and admixture decomposition information'
-#     pcs_dict = calc_genot_pcs(pc_ref_genot_file, sid_weights_map, stats_dict, populations_to_use = ['EUR','AFR','EAS','AMR'], 
-#                               snps_filter=snps_filter, verbose=True)
-#     print 'Save projected PCs and admixture decomposition to file'
-#     save_pcs_admixture_info(pcs_dict['pcs'], pcs_dict['pop_dict'], ref_pcs_admix_file)
+    sid_weights_map, stats_dict = _parse_pc_weights_from_hdf5(pc_weights_hdf5_file)
+      
+    #Generate a snps_filter based on an individual genotype??
+    print 'Loading SNP filter'
+    snps_filter = get_snps_filter(nt_map_file)
+      
+    #Generate and save PC/admixture info file for 1000 genomes.
+    print 'Calculating PC projections and admixture decomposition information'
+    pcs_dict = calc_genot_pcs(pc_ref_genot_file, sid_weights_map, stats_dict, populations_to_use = ['TSI','FIN','IBS', 'GBR'], 
+                              snps_filter=snps_filter, verbose=True)
+    print 'Save projected PCs and admixture decomposition to file'
+    save_pcs_admixture_info(pcs_dict['pcs'], pcs_dict['pop_dict'], ref_pcs_admix_file)
 
     print 'Loading pre-calculated projected PCs and admixture decomposition to file'
     pcs_dict = load_pcs_admixture_info(ref_pcs_admix_file)
