@@ -1,6 +1,9 @@
 """
 core functions to calculate ancestry
 """
+import matplotlib
+matplotlib.use('Agg')
+
 import scipy as sp
 from scipy import linalg
 import numpy as np
@@ -124,7 +127,7 @@ def calc_indiv_genot_pcs(genotype_file, weight_dict, num_pcs_to_uses,**kwargs):
     num_nt_issues = 0
     num_snps_used = 0
     log.info('Calculating Principal Components for genotype file %s' % genotype_file)
-    pcs = sp.zeros((1, 2))
+    pcs = sp.zeros((1, num_pcs_to_uses))
     for chrom in range(1, 23):
         log_extra['progress']+=partial_progress_inc
         log.info('Working on Chromosome %d' % chrom,extra=log_extra)
@@ -150,8 +153,8 @@ def calc_indiv_genot_pcs(genotype_file, weight_dict, num_pcs_to_uses,**kwargs):
 
 
 
-def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = ['EUR','AFR','EAS'], snps_filter=None, 
-                   verbose=False, debug_cutoff=None):
+def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = ['TSI','FIN','IBS', 'GBR'], snps_filter=None, 
+                   verbose=False):
     """
     Calculates:
         - The principal components for the given genotype dataset.
@@ -174,8 +177,8 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
     log.info('Loading genotypes')
     h5f = h5py.File(genot_file, 'r')
 
-#     populations = h5f['indivs']['populations'][...]
-    populations = h5f['indivs']['continent'][...]  #Currently this is using continents, but we can/should switch to populations.  
+    populations = h5f['indivs']['ancestry'][...]
+#     populations = h5f['indivs']['continent'][...]  #Currently this is using continents, but we can/should switch to populations.  
     #We should also consider to allow us to combine multiple populations in one group, or something like that. 
     
     indiv_filter = sp.in1d(populations, populations_to_use)
@@ -196,10 +199,7 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
         log.info('Identifying overlap')
         ok_snp_filter = sp.in1d(ok_sids, snps_filter[chrom_str])
         ok_chrom_sids = ok_sids.compress(ok_snp_filter, axis=0)
-        if debug_cutoff is None:
-            sids = h5f[chrom_str]['variants']['ID'][...]
-        else:
-            sids = h5f[chrom_str]['variants']['ID'][:debug_cutoff]  #A debugging hack
+        sids = h5f[chrom_str]['variants']['ID'][...]
         ok_snp_filter = sp.in1d(sids, ok_chrom_sids)
         #         assert sids[ok_snp_filter]==ok_sids, 'WTF?'
         sids = sids.compress(ok_snp_filter, axis=0)
@@ -207,13 +207,18 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
         log.info('Loading SNPs')
         if verbose:
             print 'Loading SNPs'
-        if debug_cutoff is None:
-            snps = h5f[chrom_str]['calldata']['snps'][...]
-        else:
-            snps = h5f[chrom_str]['calldata']['snps'][:debug_cutoff]  #A debugging hack
+        snps = h5f[chrom_str]['calldata']['snps'][...]
+        length = len(h5f[chrom_str]['variants/REF'])
+        nts = np.hstack((h5f[chrom_str]['variants/REF'][:].reshape(length, 1),
+                         h5f[chrom_str]['variants/ALT'][:].reshape(length, 1)))
+        
         if verbose:
             print 'Filtering SNPs'
         snps = snps.compress(ok_snp_filter, axis=0)
+        nts = nts.compress(ok_snp_filter, axis=0)
+        
+        assert len(nts)==len(snps), 'Somethings wrong.'
+        
         if verbose:
             print 'Using %d SNPs'%sp.sum(ok_snp_filter)
             print 'Filtering individuals.'
@@ -221,20 +226,14 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
         if verbose:
             print 'Using %d individuals'%sp.sum(indiv_filter)
         
-        if debug_cutoff is None:
-            length = len(h5f[chrom_str]['variants/REF'])
-            nts = np.hstack((h5f[chrom_str]['variants/REF'][:].reshape(length, 1),
-                             h5f[chrom_str]['variants/ALT'][:].reshape(length, 1)))
-        else:
-            length = debug_cutoff
-            nts = np.hstack((h5f[chrom_str]['variants/REF'][:debug_cutoff].reshape(length, 1),
-                             h5f[chrom_str]['variants/ALT'][:debug_cutoff].reshape(length, 1)))
-            nts = nts.compress(ok_snp_filter, axis=0)
         log.info('Updating PCs')
         if verbose:
             print 'Calculating PC projections'
         pcs_per_chr = _calc_pcs(pc_weights_dict, sids, nts, snps, num_pcs_to_use)
         pcs += pcs_per_chr['pcs']
+        if verbose:
+            print 'Encountered %d nucleotide issues.'%pcs_per_chr['num_nt_issues']
+            print 'Used %d SNPs for projection.'%pcs_per_chr['num_snps_used']
         num_nt_issues += pcs_per_chr['num_nt_issues']
         num_snps_used += pcs_per_chr['num_snps_used']
 
@@ -304,7 +303,7 @@ def load_pcs_admixture_info(input_file):
 
 
 def ancestry_analysis(genotype_file, weights_file, pcs_file, check_population='EUR', 
-                      verbose=False, debug_cutoff=None, **kwargs):
+                      verbose=False, **kwargs):
     """
     Runs the ancestry analysis on a single genome.  It consists of three steps:
         1. Estimate the PC values for the individual.
@@ -328,7 +327,7 @@ def ancestry_analysis(genotype_file, weights_file, pcs_file, check_population='E
     admixture = calc_admixture(genotype_pcs, pop_dict['admix_decom_mat'])
     
     check_population = check_in_population(genotype_pcs, pcs, pop_dict['populations'], check_population)
-    ancestry_dict = {'check_population': check_population, 'admixture': admixture}
+    ancestry_dict = {'check_population': check_population, 'admixture': admixture, 'indiv_pcs':genotype_pcs}
     return ancestry_dict
 
 
@@ -360,8 +359,7 @@ def check_in_population(idiv_pcs, ref_pcs, ref_populations, check_pop='EUR', std
 
 
 
-
-def plot_pcs(plot_file, pcs, populations, genotype_pcs_dict=None):
+def plot_pcs(plot_file, pcs, populations, indiv_pcs=None):
     """
     Plots the PCs of the hapmap and if provided of the genotype
     :param populations: dictionary with different population masks for coloring the individuals
@@ -371,13 +369,18 @@ def plot_pcs(plot_file, pcs, populations, genotype_pcs_dict=None):
     """
     log.info('Plotting PCs of Hapmap')
     # Plot them
-    for population, mask in populations.items():
-        pylab.plot(pcs[mask][:, 0], pcs[mask][:, 1], label=population, ls='', marker='.', alpha=0.6)
+    pylab.clf()
+    unique_pops = sp.unique(populations)
+    for pop in unique_pops:
+        pop_filter = sp.in1d(populations, [pop])
+        pop_pcs = pcs[pop_filter]
+        print pop_pcs.shape
+        pylab.plot(pop_pcs[:,0], pop_pcs[:,1], label=pop, ls='', marker='.', alpha=0.6)
 
     log.info('Plotting genome on plot')
     # Project genome on to plot.
-    if genotype_pcs_dict is not None:
-        pylab.plot(genotype_pcs_dict['pc1'], genotype_pcs_dict['pc2'], 'o', label='This is you')
+    if indiv_pcs is not None:
+        pylab.plot(indiv_pcs[0], indiv_pcs[1], 'o', label='This is you')
     pylab.xlabel('PC 1')
     pylab.ylabel('PC 2')
     pylab.legend(loc=4, numpoints=1)
@@ -417,7 +420,7 @@ def _calc_pcs(weight_dict, sids, nts, snps, num_pcs_to_use):
         # Project on the PCs
         pcs += sp.dot(norm_snp, pc_weights)
         num_snps_used += 1
-
+        
     return {'num_snps_used': num_snps_used, 'num_nt_issues': num_nt_issues, 'pcs': pcs}
 
 
@@ -437,42 +440,65 @@ def calc_admixture(pred_pcs, admix_decomp_mat):
 
     v=sp.concatenate((pred_pcs,[1.0]))
     admixture = sp.dot(v, admix_decomp_mat)
-    assert sp.sum(admixture)==1, "Admixture doesn't sum to 1: "+str(admixture)
-    return admixture
+    assert 0.99<sp.sum(admixture)<1.01, "Admixture doesn't sum to 1: "+str(admixture)
+    raw_admixture = sp.copy(admixture)
+    admixture[admixture<0]=0
+    admixture = admixture/sp.sum(admixture)
+    confidence_score = sp.sum((admixture-raw_admixture)**2)/len(admixture)
+    if confidence_score<0.001: 
+        confidence = 'Very good'
+    elif confidence_score<0.01:
+        confidence = 'Good'
+    elif confidence_score<0.1:
+        confidence = 'Mediocre'
+    elif confidence_score<1:
+        confidence = 'Poor'
+    else:
+        confidence='None'
+    return {'admixture':admixture, 'unadjusted_admixture':raw_admixture, 'confidence':confidence, 'confidence_score':confidence_score}
 
 
 #For debugging purposes
-def _test_admixture_():
-    pc_weights_file = '/faststorage/project/TheHonestGene/snpweights/snpwt.CO'
-    pc_weights_hdf5_file = '/faststorage/project/TheHonestGene/snpweights/snpwt.CO.hdf5'
+def _test_admixture_(indiv_genot_file = '2cc3830e0781569e.genome_imputed.hdf5'):
+    indiv_genot_file = '/faststorage/project/TheHonestGene/prediction_data/23andme-genomes_imputed/'+indiv_genot_file
+    pc_weights_file = '/faststorage/project/TheHonestGene/snpweights/snpwt.CEPH_whites'
+    pc_weights_hdf5_file = '/faststorage/project/TheHonestGene/snpweights/snpwt.CEPH_whites.hdf5'
     nt_map_file = '/faststorage/project/TheHonestGene/data_for_pipeline/NT_DATA/23andme_v4_nt_map.pickled'
     pc_ref_genot_file = '/faststorage/project/TheHonestGene/data_for_pipeline/1k_genomes_hg.hdf5'
-    indiv_genot_file = '/faststorage/project/TheHonestGene/prediction_data/23andme-genomes_imputed/3a9c0f27a91816e7.genome_imputed.hdf5'
-    ref_pcs_admix_file = '/faststorage/project/TheHonestGene/test_data/1kg_CEPH_pcs_admix_data.hdf5'
+    ref_pcs_admix_file = '/faststorage/project/TheHonestGene/test_data/1kg_CO_pcs_admix_data.hdf5'
+    pcs_plot_file = '/faststorage/project/TheHonestGene/test_data/pc_plot.png'
     
-    #Parse and save weights file
-    print 'Parsing SNP weights from text file'
-    sid_weights_map, stats_dict = _parse_pc_weights_from_text(pc_weights_file)
-    print 'Storing SNP weights'
-    save_pc_weights(sid_weights_map, stats_dict, pc_weights_hdf5_file)
+#     #Parse and save weights file
+#     print 'Parsing SNP weights from text file'
+#     sid_weights_map, stats_dict = _parse_pc_weights_from_text(pc_weights_file)
+#     print 'Storing SNP weights'
+#     save_pc_weights(sid_weights_map, stats_dict, pc_weights_hdf5_file)
 #     sid_weights_map, stats_dict = _parse_pc_weights_from_hdf5(pc_weights_hdf5_file)
-    
+      
     #Generate a snps_filter based on an individual genotype??
-    print 'Loading SNP filter'
-    snps_filter = get_snps_filter(nt_map_file)
+#     print 'Loading SNP filter'
+#     snps_filter = get_snps_filter(nt_map_file)
+#       
+#     #Generate and save PC/admixture info file for 1000 genomes.
+#     print 'Calculating PC projections and admixture decomposition information'
+#     pcs_dict = calc_genot_pcs(pc_ref_genot_file, sid_weights_map, stats_dict, populations_to_use = ['TSI','FIN','IBS', 'GBR'], 
+#                               snps_filter=snps_filter, verbose=True)
+#     print 'Save projected PCs and admixture decomposition to file'
+#     save_pcs_admixture_info(pcs_dict['pcs'], pcs_dict['pop_dict'], ref_pcs_admix_file)
+
+    print 'Loading pre-calculated projected PCs and admixture decomposition to file'
+    pcs_dict = load_pcs_admixture_info(ref_pcs_admix_file)
     
-    #Generate and save PC/admixture info file for 1000 genomes.
-    print 'Calculating PC projections and admixture decomposition information'
-    pcs_dict = calc_genot_pcs(pc_ref_genot_file, sid_weights_map, stats_dict, populations_to_use = ['EUR','AFR','EAS'], 
-                              snps_filter=snps_filter, verbose=True)
-    print 'Save projected PCs and admixture decomposition to file'
-    save_pcs_admixture_info(pcs_dict['pcs'], pcs_dict['pop_dict'], ref_pcs_admix_file)
 
     # Calculate admixture for an individual
     print 'Calculate admixture for an individual.'
     ancestry_results =  ancestry_analysis(indiv_genot_file, pc_weights_hdf5_file, ref_pcs_admix_file, check_population='EUR',)
-    print ancestry_results
+    print ancestry_results['admixture']
+    
     
     #Plot PCs..
+    print "Plot PC projection for the genotypes."
+    plot_pcs(pcs_plot_file, pcs_dict['pcs'], pcs_dict['pop_dict']['populations'], indiv_pcs=ancestry_results['indiv_pcs'])
+    
     
     
