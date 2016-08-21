@@ -327,31 +327,38 @@ def ancestry_analysis(genotype_file, weights_file, pcs_file, check_population='E
 
     admixture = calc_admixture(genotype_pcs, pop_dict['admix_decom_mat'])
     
-    pop_filter = sp.in1d(pop_dict['populations'],[check_population])
-    check_population = check_in_population(pcs[pop_filter], genotype_pcs[0],genotype_pcs[1])
-    ancestry_dict={}
+    check_population = check_in_population(genotype_pcs, pcs, pop_dict['populations'], check_population)
     ancestry_dict = {'check_population': check_population, 'admixture': admixture}
     return ancestry_dict
 
 
 
-def check_in_population(pcs, pc1, pc2):
+
+
+def check_in_population(idiv_pcs, ref_pcs, ref_populations, check_pop='EUR', std_dist=2):
     """
     Check if PC1 and PC2 are within the populations' PCs
-    :param pcs: pcs of the population
-    :param pc1: PC1 of the individual
-    :param pc2: PC2 of the individual
+    Returns true if the individual is within std_dist std from the average value of the reference population to check.
+    
+    :param idiv_pcs: pcs of the predicted individual
+    :param ref_pcs: pcs of the reference data (e.g. 1K genomes)
+    :param ref_populations: a list (or array) of population assignments for the reference population.
+    :param check_pop: The population to check.
     :return: Dictionary with various statistics
     """
     # Report ancestry.
-    pop_mean = sp.mean(pcs, 0)
-    pop_std = sp.std(pcs, 0)
-    pop_lim = (3 * pop_std) ** 2
-    ind_pcs = sp.array([pc1, pc2])
-    ind_lim = (ind_pcs - pop_mean) ** 2
-    is_in_population = sp.any(ind_lim ** 2 < pop_lim)
-    return {'pop_lim': pop_lim, 'pop_mean': pop_mean, 'pop_std': pop_std, 'ind_lim': ind_lim,
-            'is_in_population': is_in_population,'pc1':pc1,'pc2':pc2}
+    pop_filter = sp.in1d(ref_populations, [check_pop])
+    pop_pcs = ref_pcs[pop_filter]
+
+    pop_mean = sp.mean(pop_pcs, 0)
+    pop_std = sp.std(pop_pcs, 0)
+    indiv_std_pcs = (idiv_pcs-pop_mean)/pop_std
+    indiv_ref_pop_dist = sp.sqrt(sp.sum((indiv_std_pcs**2),1))
+    is_in_population = indiv_ref_pop_dist < std_dist
+    return {'ref_pop_mean_pcs': pop_mean, 'ref_pop_std': pop_std,
+            'is_in_population': is_in_population}
+
+
 
 
 def plot_pcs(plot_file, pcs, populations, genotype_pcs_dict=None):
