@@ -9,7 +9,10 @@ from scipy import linalg
 import numpy as np
 import h5py
 import pylab
-import cPickle
+try:
+    import cPickle as pickle
+except ImportError: # will be 3.series		  except ImportError: # will be 3.series
+    import pickle
 import logging
 from os import path
 
@@ -57,7 +60,7 @@ def _parse_pc_weights_from_hdf5(pc_weights_file):
     """
     gh5f = h5py.File(pc_weights_file, 'r')
     weights = {}
-    attrs = gh5f.attrs;
+    attrs = gh5f.attrs
     stats_dict = {'linear_transform': attrs['linear_transform'].tolist(), 'shrinkage': attrs['shrinkage'].tolist()}
     populations = {}
     for key, value in attrs.items():
@@ -191,8 +194,6 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
     num_snps_used = 0
     log.info('Calculating PCs')
     for chrom in range(1, 23):
-        if verbose:
-            print 'Working on Chromosome %d' % chrom
         log.info('Working on Chromosome %d' % chrom)
         chrom_str = 'chr%d' % chrom
 
@@ -205,35 +206,30 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
         sids = sids.compress(ok_snp_filter, axis=0)
 
         log.info('Loading SNPs')
-        if verbose:
-            print 'Loading SNPs'
         snps = h5f[chrom_str]['calldata']['snps'][...]
         length = len(h5f[chrom_str]['variants/REF'])
         nts = np.hstack((h5f[chrom_str]['variants/REF'][:].reshape(length, 1),
                          h5f[chrom_str]['variants/ALT'][:].reshape(length, 1)))
         
-        if verbose:
-            print 'Filtering SNPs'
+        log.debug('Filtering SNPs')
         snps = snps.compress(ok_snp_filter, axis=0)
         nts = nts.compress(ok_snp_filter, axis=0)
         
         assert len(nts)==len(snps), 'Somethings wrong.'
         
-        if verbose:
-            print 'Using %d SNPs'%sp.sum(ok_snp_filter)
-            print 'Filtering individuals.'
+        log.debug('Using %d SNPs'%sp.sum(ok_snp_filter))
+        log.debug('Filtering individuals')
         snps = snps[:,indiv_filter] #Filter individuals with certain ancestry for the analyses
-        if verbose:
-            print 'Using %d individuals'%sp.sum(indiv_filter)
+
+        log.debug('Using %d individuals'%sp.sum(indiv_filter))
         
         log.info('Updating PCs')
-        if verbose:
-            print 'Calculating PC projections'
+        log.debug('Calculating PC projections')
         pcs_per_chr = _calc_pcs(pc_weights_dict, sids, nts, snps, num_pcs_to_use)
         pcs += pcs_per_chr['pcs']
-        if verbose:
-            print 'Encountered %d nucleotide issues.'%pcs_per_chr['num_nt_issues']
-            print 'Used %d SNPs for projection.'%pcs_per_chr['num_snps_used']
+
+        log.debug('Encountered %d nucleotide issues.'%pcs_per_chr['num_nt_issues'])
+        log.debug('Used %d SNPs for projection.'%pcs_per_chr['num_snps_used'])
         num_nt_issues += pcs_per_chr['num_nt_issues']
         num_snps_used += pcs_per_chr['num_snps_used']
 
@@ -252,7 +248,7 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use = [
         num_indiv_list.append(pop_num_indivs)
         E[i]=sp.concatenate((avg_pcs,[1.0]))
 #     E = sp.transpose(E)
-    print E 
+    #print E
     #For decomposition of admixture, we assume that the same set of SNPs are used.
     pop_dict = {'admix_decom_mat': linalg.inv(E), 'populations': filtered_populations, 'unique_populations':populations_to_use, 
                 'avg_pcs':sp.array(avg_pcs_list), 'num_indivs':num_indiv_list}  
@@ -320,7 +316,7 @@ def ancestry_analysis(genotype_file, weights_file, pcs_file, check_population='E
     pcs_admixture_dict = load_pcs_admixture_info(pcs_file)
     pcs = pcs_admixture_dict['pcs']
     pop_dict = pcs_admixture_dict['pop_dict']
-    print pop_dict['unique_populations']
+    log.debug(pop_dict['unique_populations'])
     genotype_d = calc_indiv_genot_pcs(genotype_file, weight_dict, len(pop_dict['unique_populations'])-1, **kwargs)
     genotype_pcs = genotype_d['pcs'][0]
 
@@ -374,7 +370,7 @@ def plot_pcs(plot_file, pcs, populations, indiv_pcs=None):
     for pop in unique_pops:
         pop_filter = sp.in1d(populations, [pop])
         pop_pcs = pcs[pop_filter]
-        print pop_pcs.shape
+        #print pop_pcs.shape
         pylab.plot(pop_pcs[:,0], pop_pcs[:,1], label=pop, ls='', marker='.', alpha=0.6)
 
     log.info('Plotting genome on plot')
@@ -425,7 +421,7 @@ def _calc_pcs(weight_dict, sids, nts, snps, num_pcs_to_use):
 
 
 def get_snps_filter(nt_map_file):
-    nt_map = cPickle.load(open(nt_map_file,'r'))
+    nt_map = pickle.load(open(nt_map_file,'r'))
     snps_filter = {}
     for chrom in range(1, 23):
         chrom_str = 'chr%d' % chrom
@@ -486,18 +482,18 @@ def _test_admixture_(indiv_genot_file = '2cc3830e0781569e.genome_imputed.hdf5'):
 #     print 'Save projected PCs and admixture decomposition to file'
 #     save_pcs_admixture_info(pcs_dict['pcs'], pcs_dict['pop_dict'], ref_pcs_admix_file)
 
-    print 'Loading pre-calculated projected PCs and admixture decomposition to file'
+    print('Loading pre-calculated projected PCs and admixture decomposition to file')
     pcs_dict = load_pcs_admixture_info(ref_pcs_admix_file)
     
 
     # Calculate admixture for an individual
-    print 'Calculate admixture for an individual.'
+    print('Calculate admixture for an individual.')
     ancestry_results =  ancestry_analysis(indiv_genot_file, pc_weights_hdf5_file, ref_pcs_admix_file, check_population='EUR',)
-    print ancestry_results['admixture']
+    print(ancestry_results['admixture'])
     
     
     #Plot PCs..
-    print "Plot PC projection for the genotypes."
+    print("Plot PC projection for the genotypes.")
     plot_pcs(pcs_plot_file, pcs_dict['pcs'], pcs_dict['pop_dict']['populations'], indiv_pcs=ancestry_results['indiv_pcs'])
     
     
