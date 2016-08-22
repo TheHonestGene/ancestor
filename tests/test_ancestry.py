@@ -13,12 +13,10 @@ stats_to_assert = {'shrinkage': [0.869045547838, 0.769657143423, 0.731475178282,
                    'num_pcs': 10}
 
 ancestry_to_assert = {'indiv_pcs': np.asarray([-0.03520987, -0.00157889, -0.02793205]),
-                      'check_population': {'pop_std':np.asarray([ np.nan,  np.nan,  np.nan]),
-                                           'pop_mean':np.asarray([ np.nan,  np.nan,  np.nan]),
-                                           'ind_lim':np.asarray([ np.nan,  np.nan]),'pop_lim':np.asarray([ np.nan,  np.nan]),
-                                           'is_in_population':False,
-                                           'pc2': -0.0015788942138530353, 'pc1': -0.035209866097214847,
-                                           'population':'EUR'},
+                      'check_population': {'ref_pop_std':np.asarray([ 0.00125915,  0.00123291,  0.00124285]),
+                                           'ref_pop_mean_pcs':np.asarray([-0.03426199, -0.00177332, -0.02924874]),
+                                           'is_in_population':True,
+                                           'check_pop':b'GBR'},
                       'admixture': {'unadjusted_admixture': np.asarray([ 0.09676908,  0.57078818, -0.02539509,  0.35783837]),
                                     'admixture':np.asarray([ 0.09437244,  0.55665166,  0.        ,  0.34897591]),
                                     'confidence': 'Very good',
@@ -65,7 +63,7 @@ def test_ancestry_analysis():
     genotype_file = path.join(data_path, 'genotype.hdf5')
     pcs_file = path.join(data_path, 'pcs.hdf5')
     weights_file = path.join(data_path, 'weights.hdf5')
-    ancestry_dict = an.ancestry_analysis(genotype_file, weights_file, pcs_file)
+    ancestry_dict = an.ancestry_analysis(genotype_file, weights_file, pcs_file,check_population=b'GBR')
     assert_ancestry_dict(ancestry_dict)
 
 
@@ -92,14 +90,10 @@ def assert_ancestry_dict(ancestry_dict):
     admixture_assert = ancestry_to_assert['admixture']
 
     assert_almost_equal(ancestry_dict['indiv_pcs'],ancestry_to_assert['indiv_pcs'])
-    assert_almost_equal(pop_check['pop_std'], pop_chec_assert['pop_std'])
-    assert_almost_equal(pop_check['ind_lim'], pop_chec_assert['ind_lim'])
-    assert_almost_equal(pop_check['pop_lim'], pop_chec_assert['pop_lim'])
-    assert_almost_equal(pop_check['pop_mean'], pop_chec_assert['pop_mean'])
-    assert pop_check['pc1'] == pop_chec_assert['pc1']
-    assert pop_check['pc2'] == pop_chec_assert['pc2']
+    assert_almost_equal(pop_check['ref_pop_std'], pop_chec_assert['ref_pop_std'])
+    assert_almost_equal(pop_check['ref_pop_mean_pcs'], pop_chec_assert['ref_pop_mean_pcs'])
     assert pop_check['is_in_population'] == pop_chec_assert['is_in_population']
-    #assert pop_check['population'] == pop_chec_assert['population']
+    assert pop_check['check_pop'] == pop_chec_assert['check_pop']
     assert_almost_equal(admixture['unadjusted_admixture'],admixture_assert['unadjusted_admixture'])
     assert_almost_equal(admixture['admixture'],admixture_assert['admixture'])
     assert admixture['confidence'] == admixture_assert['confidence']

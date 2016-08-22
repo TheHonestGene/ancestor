@@ -322,8 +322,10 @@ def ancestry_analysis(genotype_file, weights_file, pcs_file, check_population='E
     genotype_pcs = genotype_d['pcs'][0]
 
     admixture = calc_admixture(genotype_pcs, pop_dict['admix_decom_mat'])
-
-    check_population = check_in_population(genotype_pcs, pcs, pop_dict['populations'], check_population)
+    try:
+        check_population = check_in_population(genotype_pcs, pcs, pop_dict['populations'], check_population)
+    except Exception as err:
+        check_population = str(err)
     ancestry_dict = {'check_population': check_population, 'admixture': admixture, 'indiv_pcs':genotype_pcs}
     return ancestry_dict
 
@@ -354,7 +356,7 @@ def check_in_population(idiv_pcs, ref_pcs, ref_populations, check_pop=b'EUR', st
     indiv_ref_pop_dist = sp.sqrt(sp.sum(indiv_std_pcs**2))
     is_in_population = indiv_ref_pop_dist < std_dist
     return {'ref_pop_mean_pcs': pop_mean, 'ref_pop_std': pop_std,
-            'is_in_population': is_in_population}
+            'is_in_population': is_in_population,'check_pop':check_pop}
 
 
 
@@ -374,7 +376,7 @@ def plot_pcs(plot_file, pcs, populations, indiv_pcs=None):
         pop_filter = sp.in1d(populations, [pop])
         pop_pcs = pcs[pop_filter]
         #print pop_pcs.shape
-        pylab.plot(pop_pcs[:,0], pop_pcs[:,1], label=pop, ls='', marker='.', alpha=0.6)
+        pylab.plot(pop_pcs[:,0], pop_pcs[:,1], label=pop.decode('utf-8'), ls='', marker='.', alpha=0.6)
 
     log.info('Plotting genome on plot')
     # Project genome on to plot.
