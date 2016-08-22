@@ -20,5 +20,5 @@
         "**/.vscode": true,
         "**/__pycache__":true
     },
-    "python.pythonPath": "/home/timeu/.virtualenvs/thg/bin/python"
+    "python.pythonPath": "/home/GMI/uemit.seren/.virtualenvs/thehonestgene/bin/python"
 }
