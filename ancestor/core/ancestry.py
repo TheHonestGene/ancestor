@@ -331,7 +331,7 @@ def ancestry_analysis(genotype_file, weights_file, pcs_file, check_population='E
 
 
 
-def check_in_population(idiv_pcs, ref_pcs, ref_populations, check_pop='EUR', std_dist=2):
+def check_in_population(idiv_pcs, ref_pcs, ref_populations, check_pop=b'EUR', std_dist=2):
     """
     Check if PC1 and PC2 are within the populations' PCs
     Returns true if the individual is within std_dist std from the average value of the reference population to check.
@@ -344,6 +344,8 @@ def check_in_population(idiv_pcs, ref_pcs, ref_populations, check_pop='EUR', std
     """
     # Report ancestry.
     pop_filter = sp.in1d(ref_populations, [check_pop])
+    if np.count_nonzero(pop_filter) == 0:
+        raise Exception('%s population not found' % check_pop)
     pop_pcs = ref_pcs[pop_filter]
 
     pop_mean = sp.mean(pop_pcs, 0)
