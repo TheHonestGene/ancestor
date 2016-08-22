@@ -15,6 +15,7 @@ except ImportError: # will be 3.series		  except ImportError: # will be 3.series
     import pickle
 import logging
 from os import path
+from sys import version_info
 
 log = logging.getLogger(__name__)
 
@@ -157,7 +158,7 @@ def calc_indiv_genot_pcs(genotype_file, weight_dict, num_pcs_to_uses, **kwargs):
 
 
 
-def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use=['TSI', 'FIN', 'IBS', 'GBR'], snps_filter=None,
+def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use, snps_filter=None,
                    verbose=False):
     """
     Calculates:
@@ -181,6 +182,7 @@ def calc_genot_pcs(genot_file, pc_weights_dict, pc_stats, populations_to_use=['T
     log.info('Loading genotypes')
     h5f = h5py.File(genot_file, 'r')
 
+    populations_to_use = list(map(lambda x:x.encode(),populations_to_use)) # required for py3 compatiblity
     populations = h5f['indivs']['ancestry'][...]
     # populations = h5f['indivs']['continent'][...]  #Currently this is using continents, but we can/should switch to populations.
     # We should also consider to allow us to combine multiple populations in one group, or something like that.
@@ -299,7 +301,7 @@ def load_pcs_admixture_info(input_file):
     return {'pop_dict': pop_dict, 'pcs': pcs}
 
 
-def ancestry_analysis(genotype_file, weights_file, pcs_file, check_population='EUR',
+def ancestry_analysis(genotype_file, weights_file, pcs_file, check_population=None,
                       verbose=False, **kwargs):
     """
     Runs the ancestry analysis on a single genome.  It consists of three steps:
@@ -322,10 +324,13 @@ def ancestry_analysis(genotype_file, weights_file, pcs_file, check_population='E
     genotype_pcs = genotype_d['pcs'][0]
 
     admixture = calc_admixture(genotype_pcs, pop_dict['admix_decom_mat'])
-    try:
-        check_population = check_in_population(genotype_pcs, pcs, pop_dict['populations'], check_population)
-    except Exception as err:
-        check_population = str(err)
+
+    if check_population is not None:
+        try:
+            check_population = check_in_population(genotype_pcs, pcs, pop_dict['populations'], check_population)
+        except Exception as err:
+            check_population = str(err)
+    else: check_population = 'not run'
     ancestry_dict = {'check_population': check_population, 'admixture': admixture, 'indiv_pcs':genotype_pcs}
     return ancestry_dict
 
@@ -345,7 +350,7 @@ def check_in_population(idiv_pcs, ref_pcs, ref_populations, check_pop=b'EUR', st
     :return: Dictionary with various statistics
     """
     # Report ancestry.
-    pop_filter = sp.in1d(ref_populations, [check_pop])
+    pop_filter = sp.in1d(ref_populations, [check_pop.encode()])
     if np.count_nonzero(pop_filter) == 0:
         raise Exception('%s population not found' % check_pop)
     pop_pcs = ref_pcs[pop_filter]
@@ -429,12 +434,16 @@ def get_snps_filter(nt_map_file):
     """
     Return snp filter from the nt_map file
     """
-    nt_map = pickle.load(open(nt_map_file, 'r'))
-    snps_filter = {}
-    for chrom in range(1, 23):
-        chrom_str = 'chr%d' % chrom
-        snps_filter[chrom_str] = nt_map[chrom_str]['sids']
-    return snps_filter
+    with open(nt_map_file, 'rb') as f:
+        if version_info[0] < 3:
+            nt_map = pickle.load(f)
+        else:
+            nt_map = pickle.load(f,encoding='latin1')
+        snps_filter = {}
+        for chrom in range(1, 23):
+            chrom_str = 'chr%d' % chrom
+            snps_filter[chrom_str] = nt_map[chrom_str]['sids']
+        return snps_filter
 
 def calc_admixture(pred_pcs, admix_decomp_mat):
     """
