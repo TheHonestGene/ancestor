@@ -352,7 +352,7 @@ def check_in_population(idiv_pcs, ref_pcs, ref_populations, check_pop='EUR', std
     pop_mean = sp.mean(pop_pcs, 0)
     pop_std = sp.std(pop_pcs, 0)
     indiv_std_pcs = (idiv_pcs-pop_mean)/pop_std
-    indiv_ref_pop_dist = sp.sqrt(sp.sum((indiv_std_pcs**2),1))
+    indiv_ref_pop_dist = sp.sqrt(sp.sum(indiv_std_pcs**2))
     is_in_population = indiv_ref_pop_dist < std_dist
     return {'ref_pop_mean_pcs': pop_mean, 'ref_pop_std': pop_std,
             'is_in_population': is_in_population}
