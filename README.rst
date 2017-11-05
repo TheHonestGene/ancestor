@@ -21,19 +21,53 @@ To play around pcs files, a test genotype and the weights in HDF5 (calculated ba
 How-To
 ***********
 
-The command line can run ancestry analysis for a given genotype and optionally create a plot of the PC space.::
+There are 2 steps to finish in the ancestry pipeline.
+Some of the steps only have to be done once or once for each genotyping plattform and dataset respectively
+Each step maps to a subcommand of the command line script.
+To get information about the various subcommands the user can run:
 
-      $ ancestor --hapmap hapmap.hdf5 --pcs hapmap_pcs.hdf5 --plot ancestry.png genotype.hdf5 weights.csv
+.. code:: bash
 
-If the --pcs parameter is specified it will store the calculated PCs for all individuals in the Hapmap dataset.
-The next time ancestry is run for another genotype, the cached version can be used::
+      ancestor -h
 
-      $ ancestor --pcs hapmap_pcs.hdf5 --plot ancestry.png genotype.hdf5 weights.csv 
+Step 1 (Optional) - Convert weights file from CSV format to HDF5 format
+===============================================================
+This step is not required but can speed up the rest of the pipeline a bit.
+It also only have to be done once.
 
-Alternatively the weights can also be provided as in an hdf5 format::
+.. code:: bash
 
-      $ ancestor --pcs hapmap_pcs.hdf5 --plot ancestry.png genotype.hdf5 weights.hdf5
+      ancestor convert weights_file weights_file.hdf5
 
+
+
+Step 2 - Calculating PC projections and admixture decomposition information for a reference panel
+===============================================================
+For the admixture analysis and membership testing of an individual genotype in a specific population, the PC projections
+and admixture decomposition for a reference genotype panel have to be calculated.
+This has to be done once per genotyping platform/version and weights file.
+It is possible to use any reference genotype panel but the most comprehensive one is the 1000 genomes reference panel.
+
+.. code:: bash
+
+      ancestor prepare 1001genomes.hdf5 weights.hdf5 1000_ref_pcs_file.hdf5 --ntmap 23andme_v4_nt_map.pickled
+
+The --ntmap argument specifies the nucleotide map which is specific to the genotyping platform/version.
+This file can be created with the `imputor library <https://github.com/TheHonestGene/imputor>`_
+
+
+Step 3 - Membership test and admixture analysis of individual genotype & plotting
+===============================================================
+To calculate the PC projections and admixture decomposition of an individual genotype
+and optionally test membership and plot the PCs the individual imputed (using the imputor library) genotype
+as well as the PCs file for the reference genotype panel that was generated in Step 2 and the weights file have to be provided.
+
+
+.. code:: bash
+
+      ancestor pcs genome_imputed.hdf5 weights.hdf5 1000_ref_pcs_file.hdf5 --plot pc_plot.png --check GBR
+
+The paramters --check and --plot are optional and used for testing membership in a population and plotting
 
 Test
 -------------

@@ -10,6 +10,7 @@ import sys
 import argparse
 import logging, logging.config
 import h5py
+from os import path
 from .core import ancestry as an
 
 LOGGING = {
@@ -45,15 +46,28 @@ log = logging.getLogger()
 
 def get_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--plot", dest="plot_file", metavar="plot file", help="If specified, PCs will saved in a plot")
-    parser.add_argument('--hapmap', dest='hapmap_file', metavar="hapmap file",
-                        help='Hapmap dataset file in HDF5 format. Only required if --pcs does not exist or is not specified')
-    parser.add_argument('--pcs', dest='pcs_file', metavar="PCs file", help='The stored PCs file')
-    parser.add_argument(dest='genotype_file', metavar="genotype-file",
-                        help='Genotype file to check ancestry for (HDF5 format)')
-    parser.add_argument(dest='weights_file', metavar="weights-file",
-                        help='File that contains the PCs weights.')
+    subparsers = parser.add_subparsers(title='subcommands',description='Choose a command to run',help='Following commands are supported')
 
+    convert_parser = subparsers.add_parser('convert',help='Converting weights file from CSV format to HDF5 format')
+    convert_parser.add_argument(dest="input_file", help="Original weights file (CSV format)")
+    convert_parser.add_argument(dest="output_file", help="Name of the output file (must have .h5 or .hdf5 extension)")
+    convert_parser.set_defaults(func=convert_snp_weights)
+
+    generate_pcs_parser = subparsers.add_parser('prepare',help='Calculating PC projections and admixture decomposition information for a reference panel')
+    generate_pcs_parser.add_argument(dest="input_file", help="Reference genotype panel file (in HDF5 format)")
+    generate_pcs_parser.add_argument(dest="weights_file", help="Weights file (in HDF5 format or CSV format)")
+    generate_pcs_parser.add_argument(dest="output_file", help="Name of the output file")
+    generate_pcs_parser.add_argument("--ntmap", dest="nt_map_file", metavar="nt-map file", help="Name of the nucleotide map file to subset the SNPs")
+    generate_pcs_parser.set_defaults(func=generate_pcs)
+
+
+    ancestry_parser = subparsers.add_parser('pcs',help='Calculate the principal components for a given individual genotype using the specified weights')
+    ancestry_parser.add_argument(dest="genotype_file", metavar="genotype-file", help="Genotype file to check ancestry for (HDF5 format)")
+    ancestry_parser.add_argument(dest='weights_file', metavar="weights-file", help='Weights file (CSV or HDF5 format)')
+    ancestry_parser.add_argument(dest='pcs_file', metavar="pcs-file", help='File with PCs for reference genotype panel (HDF5 format).')
+    ancestry_parser.add_argument("--plot", dest="plot_file", metavar="plot file", help="If specified, PCs will saved in a plot")
+    ancestry_parser.add_argument("--check",dest="check_population",help="Specify a population (i.e. EUR) to check if the individual genotype is part of")
+    ancestry_parser.set_defaults(func=run)
     return parser
 
 
@@ -61,13 +75,11 @@ def main():
     # Process arguments
     parser = get_parser()
     args = vars(parser.parse_args())
+    if 'func' not in args:
+        parser.print_help()
+        return 0
     try:
-        if args['pcs_file'] is None and args['hapmap_file'] is None:
-            parser.error('At a minimum --pcs or --hapmap must be specified')
-        if args['pcs_file'] is not None and not os.path.exists(args['pcs_file']):
-            if args['hapmap_file'] is None:
-                parser.error('If pcs_file does not exist you have to provide --hapmap')
-        run(args)
+        args['func'](args)
         return 0
     except KeyboardInterrupt:
         return 0
@@ -78,42 +90,43 @@ def main():
 
 def run(args):
     genotype_file = args['genotype_file']
+    ref_pcs_admix_file = args['pcs_file']
+    check_population = args.get('check_population',None)
     weight_dict,stats = an.parse_pc_weights(args['weights_file'])
-    if args['pcs_file'] and os.path.exists(args['pcs_file']):
-        hapmap_pcs_dict = an.load_pcs_from_file(args['pcs_file'])
-    else:
-        snp_ids = _get_snp_ids_from_genotype(genotype_file)
-        hapmap_pcs_dict = an.calculate_hapmap_pcs(args['hapmap_file'], weight_dict,snp_ids)
-        hapmap_pcs_dict['populations'] = _get_populations_from_hapmap(args['hapmap_file'])
-        if args['pcs_file'] is not None:
-            an.save_hapmap_pcs(hapmap_pcs_dict['pcs'],hapmap_pcs_dict['populations'], args['pcs_file'])
-    genotype_pcs = an.calc_genotype_pcs(genotype_file, weight_dict)
-    
-    pcs = hapmap_pcs_dict['pcs']
-    populations = hapmap_pcs_dict['populations']
-    eur_filter = populations['EUR']
-    pc1 = genotype_pcs['pc1']
-    pc2 = genotype_pcs['pc2']
-    ancestry_dict = an.check_in_population(pcs[eur_filter], pc1, pc2)
-    eur_mean_PC1, eur_mean_PC2 = ancestry_dict['pop_mean'].tolist()
-    eur_std_PC1, eur_std_PC2 = ancestry_dict['pop_std'].tolist()
-    eur_lim_PC1, eur_lim_PC2 = ancestry_dict['pop_lim'].tolist()
-    ind_lim_PC1, ind_lim_PC2 = ancestry_dict['ind_lim'].tolist()
-
-    log.debug('European mean: PC1: %.6f, PC2: %.6f and std: PC1 :%.6f, PC2: %.6f' % (
-        eur_mean_PC1, eur_mean_PC2, eur_std_PC1, eur_std_PC2))
-    log.debug('PC1: %.6f and PC2: %.6f' % (pc1, pc2))
-
-    if not ancestry_dict['is_in_population']:
-        log.warn(
-                'Sample appears to contain some non-European ancestry (%.6f,%.6f > %.6f,%.6f).  This means that current genetic predictions are probably not accurate.' % (
-                    ind_lim_PC1, ind_lim_PC2, eur_lim_PC1, eur_lim_PC2))
-    else:
-        log.info('Sample appears to be of European ancestry (%.6f,%.6f < %.6f,%.6f).' % (
-            ind_lim_PC1, ind_lim_PC2, eur_lim_PC1, eur_lim_PC2))
+    pcs_dict = an.load_pcs_admixture_info(ref_pcs_admix_file)
+    ancestry_results = an.ancestry_analysis(genotype_file, args['weights_file'], ref_pcs_admix_file, check_population=check_population)
+    indiv_pcs = ancestry_results['indiv_pcs']
+    pc1 = indiv_pcs[0]
+    pc2 = indiv_pcs[1]
+    log.info(ancestry_results)
 
     if args['plot_file'] is not None:
-        an.plot_pcs(args['plot_file'], pcs, populations, genotype_pcs)
+        an.plot_pcs(args['plot_file'], pcs_dict['pcs'], pcs_dict['pop_dict']['populations'], indiv_pcs=indiv_pcs)
+
+def convert_snp_weights(args):
+    input_pc_weights_file = args['input_file']
+    output_pc_weights_file = args['output_file']
+    if not path.basename(output_pc_weights_file).lower().endswith((".hdf5", ".h5")):
+        raise Exception('% file must have extension .hdf5 or .h5' % output_pc_weights_file)
+    if not path.basename(input_pc_weights_file).lower().endswith((".hdf5", ".h5")):
+        sid_weights_map, stats_dict = an.parse_pc_weights(input_pc_weights_file)
+        an.save_pc_weights(sid_weights_map, stats_dict, output_pc_weights_file)
+
+
+def generate_pcs(args):
+    nt_map_file = args.get('nt_map_file', None)
+    ref_pcs_admix_file = args['output_file']
+    pc_ref_genot_file = args['input_file']
+    populations_to_use = ['TSI', 'FIN', 'IBS', 'GBR']
+    pc_weights_file = args['weights_file']
+    snp_filter = None
+    if nt_map_file is not None:
+        snps_filter = an.get_snps_filter(nt_map_file)
+
+    sid_weights_map, stats_dict = an.parse_pc_weights(pc_weights_file)
+    pcs_dict = an.calc_genot_pcs(pc_ref_genot_file, sid_weights_map, stats_dict, populations_to_use = populations_to_use, snps_filter=snps_filter)
+    an.save_pcs_admixture_info(pcs_dict['pcs'], pcs_dict['pop_dict'], ref_pcs_admix_file)
+
 
 
 def _get_snp_ids_from_genotype(genotype):
