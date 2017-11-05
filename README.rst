@@ -2,6 +2,12 @@
 Ancestor: Simple ancestry analysis
 **********************************
 
+.. image:: https://travis-ci.org/TheHonestGene/ancestor.svg?branch=master
+   :target: https://travis-ci.org/TheHonestGene/ancestor
+
+.. image:: https://coveralls.io/repos/github/TheHonestGene/ancestor/badge.svg?branch=master
+   :target: https://coveralls.io/github/TheHonestGene/ancestor?branch=master
+
 Ancestor is a very simple library for doing ancestry analysis
 of a genotype dataset (i.e. 23andMe)
 

@@ -350,7 +350,7 @@ def check_in_population(idiv_pcs, ref_pcs, ref_populations, check_pop=b'EUR', st
     :return: Dictionary with various statistics
     """
     # Report ancestry.
-    pop_filter = sp.in1d(ref_populations, [check_pop.encode()])
+    pop_filter = sp.in1d(ref_populations, [check_pop])
     if np.count_nonzero(pop_filter) == 0:
         raise Exception('%s population not found' % check_pop)
     pop_pcs = ref_pcs[pop_filter]
